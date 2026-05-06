@@ -1,0 +1,316 @@
+=================================================================
+CRIME SIGHT NOIR - DATABASE SCHEMA & SEED LOGIC (SQLite)
+=================================================================
+
+The database is powered by SQLite3. Below is the exact schema and data structures used.
+
+def init_db():
+    conn = get_db()
+    cur  = conn.cursor()
+    cur.executescript("""
+        CREATE TABLE IF NOT EXISTS police_stations (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            ps_code  TEXT NOT NULL UNIQUE,
+            name     TEXT NOT NULL,
+            district TEXT NOT NULL,
+            state    TEXT NOT NULL,
+            lat      REAL NOT NULL,
+            lng      REAL NOT NULL,
+            sector   TEXT
+        );
+        CREATE TABLE IF NOT EXISTS officers (
+            id    TEXT PRIMARY KEY,
+            name  TEXT NOT NULL,
+            squad TEXT,
+            rank  TEXT
+        );
+        CREATE TABLE IF NOT EXISTS criminals (
+            id       TEXT PRIMARY KEY,
+            name     TEXT NOT NULL,
+            age      INTEGER,
+            address  TEXT,
+            photo_id TEXT,
+            alias    TEXT
+        );
+        CREATE TABLE IF NOT EXISTS cases (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            fir_number         TEXT NOT NULL UNIQUE,
+            station_id         INTEGER,
+            officer_id         TEXT,
+            criminal_id        TEXT,
+            assign_id          TEXT,
+            case_code          TEXT,
+            status             TEXT NOT NULL,
+            severity           TEXT NOT NULL,
+            crime_type         TEXT NOT NULL,
+            crime_count        INTEGER DEFAULT 1,
+            completion_pct     INTEGER DEFAULT 0,
+            handling           TEXT,
+            investigation_type TEXT,
+            arrest_date        TEXT,
+            photo_resolution   TEXT,
+            remarks            TEXT,
+            transfers          INTEGER DEFAULT 0,
+            experience_years   INTEGER DEFAULT 0,
+            FOREIGN KEY (station_id)  REFERENCES police_stations(id),
+            FOREIGN KEY (officer_id)  REFERENCES officers(id),
+            FOREIGN KEY (criminal_id) REFERENCES criminals(id)
+        );
+        CREATE TABLE IF NOT EXISTS users (
+            username    TEXT PRIMARY KEY,
+            password    TEXT NOT NULL,
+            role        TEXT NOT NULL,
+            display     TEXT NOT NULL,
+            station_code TEXT,
+            badge       TEXT,
+            rank        TEXT,
+            station_name TEXT,
+            district    TEXT,
+            state       TEXT,
+            squad       TEXT,
+            official_id TEXT,
+            designation TEXT,
+            department  TEXT,
+            zone        TEXT
+        );
+    """)
+    conn.commit()
+    seed_db(conn)
+    conn.close()
+
+def seed_db(conn):
+    cur = conn.cursor()
+    if cur.execute('SELECT COUNT(*) AS c FROM police_stations').fetchone()['c'] > 0:
+        return  # Already seeded
+    print('[*] Seeding database...')
+
+    # ── Police Stations ───────────────────────────────────────
+    for s in SEED_STATIONS:
+        cur.execute(
+            'INSERT OR IGNORE INTO police_stations (ps_code,name,district,state,lat,lng,sector) VALUES (?,?,?,?,?,?,?)',
+            (s['psCode'], s['name'], s['district'], s['state'], s['lat'], s['lng'], s['sector'])
+        )
+
+    # ── Officers ──────────────────────────────────────────────
+    for o in SEED_OFFICERS:
+        cur.execute(
+            'INSERT OR IGNORE INTO officers VALUES (?,?,?,?)',
+            (o['id'], o['name'], o['squad'], o['rank'])
+        )
+
+    # ── Criminals ─────────────────────────────────────────────
+    for c in SEED_CRIMINALS:
+        cur.execute(
+            'INSERT OR IGNORE INTO criminals (id,name,age,address,photo_id) VALUES (?,?,?,?,?)',
+            (c['id'], c['name'], c['age'], c['address'], c['photoId'])
+        )
+
+    # ── Cases ─────────────────────────────────────────────────
+    for c in SEED_CASES:
+        row = cur.execute('SELECT id FROM police_stations WHERE ps_code=?', (c['psCode'],)).fetchone()
+        station_id = row['id'] if row else 1
+        cur.execute("""
+            INSERT OR IGNORE INTO cases
+            (fir_number,station_id,officer_id,criminal_id,assign_id,case_code,
+             status,severity,crime_type,crime_count,completion_pct,handling,
+             investigation_type,arrest_date,photo_resolution,remarks,transfers,experience_years)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            c['firNumber'], station_id, c['officerId'], c['criminalId'],
+            c['assignId'], c['caseCode'], c['status'], c['severity'],
+            c['crimeType'], c['crimeCount'], c['completionPct'], c['handling'],
+            c['investigationType'], c['arrestDate'], c['photoResolution'],
+            c['remarks'], c['transfers'], c['experienceYears']
+        ))
+
+    # ── Users ─────────────────────────────────────────────────
+    for username, udata in USERS.items():
+        cur.execute(
+            'INSERT OR IGNORE INTO users (username,password,role,display) VALUES (?,?,?,?)',
+            (username, udata['password'], udata['role'], udata['display'])
+        )
+
+    conn.commit()
+    # Migrate existing users table if missing new columns
+    existing_cols = [r[1] for r in cur.execute('PRAGMA table_info(users)').fetchall()]
+    for col, typedef in [
+        ('badge','TEXT'),('rank','TEXT'),('station_name','TEXT'),('district','TEXT'),
+        ('state','TEXT'),('squad','TEXT'),('official_id','TEXT'),
+        ('designation','TEXT'),('department','TEXT'),('zone','TEXT')
+    ]:
+        if col not in existing_cols:
+            try:
+                cur.execute(f'ALTER TABLE users ADD COLUMN {col} {typedef}')
+            except Exception:
+                pass
+    conn.commit()
+    print(f"✅ Seeded {len(SEED_STATIONS)} stations, {len(SEED_OFFICERS)} officers, "
+          f"{len(SEED_CRIMINALS)} criminals, {len(SEED_CASES)} FIR cases, {len(USERS)} default users.")
+
+
+# ══════════════════════════════════════════════════════════════
+#  SEED DATA  (all datasets converted from JavaScript → Python)
+# ══════════════════════════════════════════════════════════════
+
+# ── 25 Police Stations ────────────────────────────────────────
+SEED_STATIONS = [
+    {'psCode': 'PS-430', 'name': 'Hyderabad Central PS',      'district': 'Hyderabad',           'state': 'Telangana',      'lat': 17.3850, 'lng': 78.4867, 'sector': 'Sector-TS1'},
+    {'psCode': 'PS-424', 'name': 'Secunderabad North PS',      'district': 'Secunderabad',        'state': 'Telangana',      'lat': 17.4399, 'lng': 78.4983, 'sector': 'Sector-TS2'},
+    {'psCode': 'PS-316', 'name': 'Warangal East PS',           'district': 'Warangal',            'state': 'Telangana',      'lat': 17.9689, 'lng': 79.5941, 'sector': 'Sector-TS3'},
+    {'psCode': 'PS-176', 'name': 'Nizamabad City PS',          'district': 'Nizamabad',           'state': 'Telangana',      'lat': 18.6726, 'lng': 78.0940, 'sector': 'Sector-TS4'},
+    {'psCode': 'PS-127', 'name': 'Karimnagar Central PS',      'district': 'Karimnagar',          'state': 'Telangana',      'lat': 18.4386, 'lng': 79.1288, 'sector': 'Sector-TS5'},
+    {'psCode': 'PS-110', 'name': 'Vijayawada City PS',         'district': 'Krishna',             'state': 'Andhra Pradesh', 'lat': 16.5062, 'lng': 80.6480, 'sector': 'Sector-AP1'},
+    {'psCode': 'PS-632', 'name': 'Visakhapatnam Port PS',      'district': 'Visakhapatnam',       'state': 'Andhra Pradesh', 'lat': 17.6868, 'lng': 83.2185, 'sector': 'Sector-AP2'},
+    {'psCode': 'PS-479', 'name': 'Guntur Town PS',             'district': 'Guntur',              'state': 'Andhra Pradesh', 'lat': 16.3067, 'lng': 80.4365, 'sector': 'Sector-AP3'},
+    {'psCode': 'PS-462', 'name': 'Tirupati Hill PS',           'district': 'Chittoor',            'state': 'Andhra Pradesh', 'lat': 13.6288, 'lng': 79.4192, 'sector': 'Sector-AP4'},
+    {'psCode': 'PS-381', 'name': 'Nellore Central PS',         'district': 'Nellore',             'state': 'Andhra Pradesh', 'lat': 14.4426, 'lng': 79.9865, 'sector': 'Sector-AP5'},
+    {'psCode': 'PS-790', 'name': 'Thiruvananthapuram PS',      'district': 'Thiruvananthapuram',  'state': 'Kerala',         'lat':  8.5241, 'lng': 76.9366, 'sector': 'Sector-KL1'},
+    {'psCode': 'PS-529', 'name': 'Ernakulam Central PS',       'district': 'Ernakulam',           'state': 'Kerala',         'lat':  9.9312, 'lng': 76.2673, 'sector': 'Sector-KL2'},
+    {'psCode': 'PS-457', 'name': 'Kozhikode Beach PS',         'district': 'Kozhikode',           'state': 'Kerala',         'lat': 11.2588, 'lng': 75.7804, 'sector': 'Sector-KL3'},
+    {'psCode': 'PS-645', 'name': 'Thrissur Town PS',           'district': 'Thrissur',            'state': 'Kerala',         'lat': 10.5276, 'lng': 76.2144, 'sector': 'Sector-KL4'},
+    {'psCode': 'PS-845', 'name': 'Kollam Port PS',             'district': 'Kollam',              'state': 'Kerala',         'lat':  8.8932, 'lng': 76.6141, 'sector': 'Sector-KL5'},
+    {'psCode': 'PS-961', 'name': 'Chennai Central PS',         'district': 'Chennai',             'state': 'Tamil Nadu',     'lat': 13.0827, 'lng': 80.2707, 'sector': 'Sector-TN1'},
+    {'psCode': 'PS-133', 'name': 'Coimbatore City PS',         'district': 'Coimbatore',          'state': 'Tamil Nadu',     'lat': 11.0168, 'lng': 76.9558, 'sector': 'Sector-TN2'},
+    {'psCode': 'PS-327', 'name': 'Madurai Central PS',         'district': 'Madurai',             'state': 'Tamil Nadu',     'lat':  9.9252, 'lng': 78.1198, 'sector': 'Sector-TN3'},
+    {'psCode': 'PS-554', 'name': 'Salem North PS',             'district': 'Salem',               'state': 'Tamil Nadu',     'lat': 11.6643, 'lng': 78.1460, 'sector': 'Sector-TN4'},
+    {'psCode': 'PS-370', 'name': 'Tiruchirappalli Fort PS',    'district': 'Tiruchirappalli',     'state': 'Tamil Nadu',     'lat': 10.7905, 'lng': 78.7047, 'sector': 'Sector-TN5'},
+    {'psCode': 'PS-846', 'name': 'Puducherry Central PS',      'district': 'Puducherry',          'state': 'Puducherry',     'lat': 11.9416, 'lng': 79.8083, 'sector': 'Sector-PY1'},
+    {'psCode': 'PS-252', 'name': 'Kurnool City PS',            'district': 'Kurnool',             'state': 'Andhra Pradesh', 'lat': 15.8281, 'lng': 78.0373, 'sector': 'Sector-AP6'},
+    {'psCode': 'PS-217', 'name': 'Khammam East PS',            'district': 'Khammam',             'state': 'Telangana',      'lat': 17.2473, 'lng': 80.1514, 'sector': 'Sector-TS6'},
+    {'psCode': 'PS-720', 'name': 'Malappuram PS',              'district': 'Malappuram',          'state': 'Kerala',         'lat': 11.0510, 'lng': 76.0711, 'sector': 'Sector-KL6'},
+    {'psCode': 'PS-421', 'name': 'Nagercoil PS',               'district': 'Kanyakumari',         'state': 'Tamil Nadu',     'lat':  8.1833, 'lng': 77.4119, 'sector': 'Sector-TN6'},
+]
+
+# ── 20 Officers ───────────────────────────────────────────────
+SEED_OFFICERS = [
+    {'id': 'ASN-9003', 'name': 'Vikram Rao',      'squad': 'Squad Bh-11',  'rank': 'Inspector'},
+    {'id': 'ASN-9004', 'name': 'Sunitha Reddy',   'squad': 'Squad Del-11', 'rank': 'Sub-Inspector'},
+    {'id': 'ASN-9005', 'name': 'Rahul Gandhi',    'squad': 'Squad Alp-10', 'rank': 'DSP'},
+    {'id': 'ASN-9006', 'name': 'Karan Verma',     'squad': 'Squad Cha-3',  'rank': 'Inspector'},
+    {'id': 'ASN-9007', 'name': 'Anjali Sharma',   'squad': 'Squad Bra-2',  'rank': 'Sub-Inspector'},
+    {'id': 'ASN-9008', 'name': 'Priya Kumar',     'squad': 'Squad Dra-6',  'rank': 'Inspector'},
+    {'id': 'ASN-9009', 'name': 'Rahul Beck',      'squad': 'Squad Del-7',  'rank': 'DSP'},
+    {'id': 'ASN-9010', 'name': 'Karan Yadav',     'squad': 'Squad Sin-12', 'rank': 'Inspector'},
+    {'id': 'ASN-9011', 'name': 'Anjal Patel',     'squad': 'Squad Bh-4',   'rank': 'Sub-Inspector'},
+    {'id': 'ASN-9012', 'name': 'Sunitha Das',     'squad': 'Squad Del-5',  'rank': 'Inspector'},
+    {'id': 'ASN-9013', 'name': 'Ramesh Nair',     'squad': 'Squad Cha-9',  'rank': 'DSP'},
+    {'id': 'ASN-9014', 'name': 'Deepa Menon',     'squad': 'Squad Alp-3',  'rank': 'Inspector'},
+    {'id': 'ASN-9015', 'name': 'Arjun Singh',     'squad': 'Squad Bra-8',  'rank': 'DSP'},
+    {'id': 'ASN-9016', 'name': 'Kavitha Pillai',  'squad': 'Squad Dra-2',  'rank': 'Inspector'},
+    {'id': 'ASN-9017', 'name': 'Suresh Babu',     'squad': 'Squad Del-11', 'rank': 'Sub-Inspector'},
+    {'id': 'ASN-9018', 'name': 'Meera Iyer',      'squad': 'Squad Sin-6',  'rank': 'Inspector'},
+    {'id': 'ASN-9019', 'name': 'Prakash Reddy',   'squad': 'Squad Bh-3',   'rank': 'DSP'},
+    {'id': 'ASN-9020', 'name': 'Lakshmi Devi',    'squad': 'Squad Cha-7',  'rank': 'Inspector'},
+    {'id': 'ASN-9021', 'name': 'Venkat Rao',      'squad': 'Squad Alp-5',  'rank': 'Sub-Inspector'},
+    {'id': 'ASN-9022', 'name': 'Priya Shah',      'squad': 'Squad Bra-11', 'rank': 'Inspector'},
+]
+
+# ── 11 Criminals ──────────────────────────────────────────────
+SEED_CRIMINALS = [
+    {'id': 'CRIM-100', 'name': 'Vikram Rao',    'age': 40, 'address': '508, Sector 12',  'photoId': 'IMG-0001'},
+    {'id': 'CRIM-101', 'name': 'Anjal Das',     'age': 17, 'address': '800, Sector 3',   'photoId': 'IMG-0002'},
+    {'id': 'CRIM-102', 'name': 'Karan Weil',    'age': 40, 'address': '201, Sector 7',   'photoId': 'IMG-0003'},
+    {'id': 'CRIM-103', 'name': 'Priya Kumari',  'age': 21, 'address': '408, Sector 5',   'photoId': 'IMG-0004'},
+    {'id': 'CRIM-104', 'name': 'Rahul Ganesh',  'age': 35, 'address': '678, Sector 9',   'photoId': 'IMG-0005'},
+    {'id': 'CRIM-105', 'name': 'Sunitha Verm',  'age': 29, 'address': '123, Sector 14',  'photoId': 'IMG-0006'},
+    {'id': 'CRIM-106', 'name': 'Karan Yadav',   'age': 22, 'address': '857, Sector 2',   'photoId': 'IMG-0007'},
+    {'id': 'CRIM-107', 'name': 'Anjali Reddy',  'age': 31, 'address': '344, Sector 8',   'photoId': 'IMG-0008'},
+    {'id': 'CRIM-108', 'name': 'Deepak Kumar',  'age': 44, 'address': '592, Sector 6',   'photoId': 'IMG-0009'},
+    {'id': 'CRIM-109', 'name': 'Ramesh Nair',   'age': 38, 'address': '267, Sector 11',  'photoId': 'IMG-0010'},
+    {'id': 'CRIM-110', 'name': 'Meena Pillai',  'age': 26, 'address': '913, Sector 4',   'photoId': 'IMG-0011'},
+]
+
+# ── 75 FIR Cases ──────────────────────────────────────────────
+# Columns: firNumber, psCode, assignId, officerId, criminalId, caseCode,
+#          completionPct, handling, investigationType, crimeType, crimeCount,
+#          status, severity, arrestDate, photoResolution, remarks, transfers, experienceYears
+SEED_CASES = [
+    {'firNumber':'FIR-2026-1',  'psCode':'PS-430','assignId':'ASN-9003','officerId':'ASN-9003','criminalId':'CRIM-100','caseCode':'CASE-2001 OFF-2037','completionPct':49, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'VEHICLE',           'crimeCount':4,'status':'Open',               'severity':get_severity('VEHICLE'),              'arrestDate':'2020-03-01','photoResolution':'1920x1080','remarks':'Standard observation',    'transfers':2, 'experienceYears':6 },
+    {'firNumber':'FIR-2026-2',  'psCode':'PS-424','assignId':'ASN-9003','officerId':'ASN-9005','criminalId':'CRIM-100','caseCode':'CASE-2003 OFF-3042','completionPct':58, 'handling':'Reassigned',   'investigationType':'Joint Open', 'crimeType':'FRAUD',             'crimeCount':1,'status':'Closed',             'severity':get_severity('FRAUD'),                'arrestDate':'2020-04-15','photoResolution':'1920x1080','remarks':'88% comp interrogation',  'transfers':1, 'experienceYears':8 },
+    {'firNumber':'FIR-2026-3',  'psCode':'PS-316','assignId':'ASN-9004','officerId':'ASN-9004','criminalId':'CRIM-101','caseCode':'CASE-2003 OFF-2010','completionPct':17, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'FRAUD',             'crimeCount':1,'status':'Open',               'severity':get_severity('FRAUD'),                'arrestDate':'2020-05-10','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':1, 'experienceYears':18},
+    {'firNumber':'FIR-2026-4',  'psCode':'PS-176','assignId':'ASN-9005','officerId':'ASN-9006','criminalId':'CRIM-102','caseCode':'CASE-2004 OFF-3011','completionPct':10, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'HOMICIDE',          'crimeCount':1,'status':'Open',               'severity':'Critical',                           'arrestDate':'2020-06-22','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':0, 'experienceYears':10},
+    {'firNumber':'FIR-2026-5',  'psCode':'PS-127','assignId':'ASN-9006','officerId':'ASN-9007','criminalId':'CRIM-103','caseCode':'CASE-2006 OFF-2012','completionPct':25, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'PUBLIC INTOXICATION','crimeCount':1,'status':'Under Investigation', 'severity':get_severity('PUBLIC INTOXICATION'), 'arrestDate':'2020-07-04','photoResolution':'800x600',  'remarks':'Standard b',              'transfers':3, 'experienceYears':7 },
+    {'firNumber':'FIR-2026-6',  'psCode':'PS-110','assignId':'ASN-9006','officerId':'ASN-9008','criminalId':'CRIM-100','caseCode':'CASE-2006 OFF-2012','completionPct':12, 'handling':'Interrogation','investigationType':'Solo',        'crimeType':'HOMICIDE',          'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2020-09-01','photoResolution':'1920x1080','remarks':'Wearing glasses',         'transfers':1, 'experienceYears':12},
+    {'firNumber':'FIR-2026-7',  'psCode':'PS-632','assignId':'ASN-9006','officerId':'ASN-9009','criminalId':'CRIM-101','caseCode':'CASE-2007 OFF-3017','completionPct':37, 'handling':'Reassigned',   'investigationType':'Joint Open', 'crimeType':'VEHICLE',           'crimeCount':3,'status':'Closed',             'severity':get_severity('VEHICLE'),              'arrestDate':'2021-01-20','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':0, 'experienceYears':16},
+    {'firNumber':'FIR-2026-8',  'psCode':'PS-479','assignId':'ASN-9007','officerId':'ASN-9010','criminalId':'CRIM-102','caseCode':'CASE-2013 OFF-3043','completionPct':15, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'ROBBERY',           'crimeCount':2,'status':'Open',               'severity':'High',                               'arrestDate':'2021-02-14','photoResolution':'800x600',  'remarks':'Clear visible',           'transfers':0, 'experienceYears':11},
+    {'firNumber':'FIR-2026-9',  'psCode':'PS-462','assignId':'ASN-9008','officerId':'ASN-9011','criminalId':'CRIM-103','caseCode':'CASE-2014 OFF-3035','completionPct':20, 'handling':'Active',        'investigationType':'Coordinate', 'crimeType':'SHOPLIFTING',       'crimeCount':3,'status':'Open',               'severity':get_severity('SHOPLIFTING'),          'arrestDate':'2021-03-05','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':0, 'experienceYears':9 },
+    {'firNumber':'FIR-2026-10', 'psCode':'PS-381','assignId':'ASN-9009','officerId':'ASN-9012','criminalId':'CRIM-104','caseCode':'CASE-2015 OFF-3016','completionPct':34, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'FRAUD',             'crimeCount':1,'status':'Closed',             'severity':get_severity('FRAUD'),                'arrestDate':'2021-04-10','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':3, 'experienceYears':16},
+    {'firNumber':'FIR-2026-11', 'psCode':'PS-790','assignId':'ASN-9010','officerId':'ASN-9013','criminalId':'CRIM-105','caseCode':'CASE-2016 OFF-3031','completionPct':37, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'ROBBERY',           'crimeCount':2,'status':'Open',               'severity':'High',                               'arrestDate':'2021-05-18','photoResolution':'800x600',  'remarks':'Slightly blurry',         'transfers':0, 'experienceYears':9 },
+    {'firNumber':'FIR-2026-12', 'psCode':'PS-529','assignId':'ASN-9011','officerId':'ASN-9014','criminalId':'CRIM-106','caseCode':'CASE-2017 OFF-3061','completionPct':37, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'VEHICLE',           'crimeCount':3,'status':'Open',               'severity':get_severity('VEHICLE'),              'arrestDate':'2021-06-25','photoResolution':'1920x1080','remarks':'Tattoo-Ml evidence',      'transfers':11,'experienceYears':11},
+    {'firNumber':'FIR-2026-13', 'psCode':'PS-457','assignId':'ASN-9012','officerId':'ASN-9015','criminalId':'CRIM-107','caseCode':'CASE-2018 OFF-3017','completionPct':39, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'ROBBERY',           'crimeCount':2,'status':'Open',               'severity':'High',                               'arrestDate':'2021-07-30','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':6, 'experienceYears':24},
+    {'firNumber':'FIR-2026-14', 'psCode':'PS-645','assignId':'ASN-9013','officerId':'ASN-9016','criminalId':'CRIM-108','caseCode':'CASE-2019 OFF-3027','completionPct':86, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'DRUG OFFENSE',      'crimeCount':5,'status':'Open',               'severity':'High',                               'arrestDate':'2021-08-14','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':1, 'experienceYears':11},
+    {'firNumber':'FIR-2026-15', 'psCode':'PS-845','assignId':'ASN-9014','officerId':'ASN-9017','criminalId':'CRIM-109','caseCode':'CASE-2020 OFF-3017','completionPct':39, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'TRAFFIC',           'crimeCount':2,'status':'Closed',             'severity':get_severity('TRAFFIC'),              'arrestDate':'2021-09-22','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':6, 'experienceYears':24},
+    {'firNumber':'FIR-2026-16', 'psCode':'PS-961','assignId':'ASN-9015','officerId':'ASN-9018','criminalId':'CRIM-110','caseCode':'CASE-2021 OFF-3018','completionPct':65, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'CYBERCRIME',        'crimeCount':4,'status':'Open',               'severity':get_severity('CYBERCRIME'),           'arrestDate':'2021-10-05','photoResolution':'1920x1080','remarks':'Wearing glasses',         'transfers':10,'experienceYears':19},
+    {'firNumber':'FIR-2026-17', 'psCode':'PS-133','assignId':'ASN-9016','officerId':'ASN-9019','criminalId':'CRIM-100','caseCode':'CASE-2022 OFF-3017','completionPct':39, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'IDENTITY THEFT',    'crimeCount':1,'status':'Under Investigation', 'severity':'High',                               'arrestDate':'2021-11-01','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':6, 'experienceYears':24},
+    {'firNumber':'FIR-2026-18', 'psCode':'PS-327','assignId':'ASN-9017','officerId':'ASN-9020','criminalId':'CRIM-101','caseCode':'CASE-2023 OFF-3023','completionPct':87, 'handling':'Interrogation','investigationType':'Joint Open', 'crimeType':'ASSAULT',           'crimeCount':6,'status':'Open',               'severity':'High',                               'arrestDate':'2021-12-12','photoResolution':'1920x1080','remarks':'Wearing.g visible',       'transfers':4, 'experienceYears':3 },
+    {'firNumber':'FIR-2026-19', 'psCode':'PS-554','assignId':'ASN-9018','officerId':'ASN-9021','criminalId':'CRIM-102','caseCode':'CASE-2024 OFF-3024','completionPct':94, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'ROBBERY',           'crimeCount':3,'status':'Closed',             'severity':'High',                               'arrestDate':'2022-01-20','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':4, 'experienceYears':3 },
+    {'firNumber':'FIR-2026-20', 'psCode':'PS-370','assignId':'ASN-9019','officerId':'ASN-9022','criminalId':'CRIM-103','caseCode':'CASE-2025 OFF-3025','completionPct':85, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'ROBBERY',           'crimeCount':2,'status':'Closed',             'severity':'High',                               'arrestDate':'2022-02-15','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':6, 'experienceYears':9 },
+    {'firNumber':'FIR-2026-21', 'psCode':'PS-846','assignId':'ASN-9020','officerId':'ASN-9003','criminalId':'CRIM-104','caseCode':'CASE-2026 OFF-3026','completionPct':80, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'VANDALISM',         'crimeCount':1,'status':'Open',               'severity':get_severity('VANDALISM'),            'arrestDate':'2022-03-01','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':2, 'experienceYears':12},
+    {'firNumber':'FIR-2026-22', 'psCode':'PS-252','assignId':'ASN-9021','officerId':'ASN-9004','criminalId':'CRIM-105','caseCode':'CASE-2027 OFF-3027','completionPct':89, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'ROBBERY',           'crimeCount':4,'status':'Open',               'severity':'High',                               'arrestDate':'2022-04-07','photoResolution':'800x600',  'remarks':'Slightly blurry',         'transfers':4, 'experienceYears':14},
+    {'firNumber':'FIR-2026-23', 'psCode':'PS-217','assignId':'ASN-9022','officerId':'ASN-9005','criminalId':'CRIM-106','caseCode':'CASE-2028 OFF-3028','completionPct':29, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'IDENTITY THEFT',    'crimeCount':1,'status':'Open',               'severity':'High',                               'arrestDate':'2022-05-17','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':0, 'experienceYears':5 },
+    {'firNumber':'FIR-2026-24', 'psCode':'PS-720','assignId':'ASN-9003','officerId':'ASN-9006','criminalId':'CRIM-107','caseCode':'CASE-2029 OFF-3029','completionPct':51, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'DRUG OFFENSE',      'crimeCount':2,'status':'Under Investigation', 'severity':'High',                               'arrestDate':'2022-06-11','photoResolution':'1920x1080','remarks':'Tattoo-Ml',               'transfers':11,'experienceYears':5 },
+    {'firNumber':'FIR-2026-25', 'psCode':'PS-421','assignId':'ASN-9004','officerId':'ASN-9007','criminalId':'CRIM-108','caseCode':'CASE-2030 OFF-3030','completionPct':28, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'SHOPLIFTING',       'crimeCount':2,'status':'Closed',             'severity':get_severity('SHOPLIFTING'),          'arrestDate':'2022-07-22','photoResolution':'1920x1080','remarks':'Wearing glasses',         'transfers':1, 'experienceYears':4 },
+    {'firNumber':'FIR-2026-26', 'psCode':'PS-430','assignId':'ASN-9003','officerId':'ASN-9008','criminalId':'CRIM-109','caseCode':'CASE-2031 OFF-3031','completionPct':55, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'VEHICLE',           'crimeCount':4,'status':'Open',               'severity':get_severity('VEHICLE'),              'arrestDate':'2022-08-09','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':6, 'experienceYears':24},
+    {'firNumber':'FIR-2026-27', 'psCode':'PS-424','assignId':'ASN-9005','officerId':'ASN-9009','criminalId':'CRIM-110','caseCode':'CASE-2032 OFF-3032','completionPct':75, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'FRAUD',             'crimeCount':1,'status':'Under Investigation', 'severity':get_severity('FRAUD'),                'arrestDate':'2022-09-04','photoResolution':'800x600',  'remarks':'Slightly blurry',         'transfers':0, 'experienceYears':6 },
+    {'firNumber':'FIR-2026-28', 'psCode':'PS-316','assignId':'ASN-9006','officerId':'ASN-9010','criminalId':'CRIM-100','caseCode':'CASE-2033 OFF-3033','completionPct':89, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'ROBBERY',           'crimeCount':5,'status':'Closed',             'severity':'High',                               'arrestDate':'2022-10-15','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':4, 'experienceYears':19},
+    {'firNumber':'FIR-2026-29', 'psCode':'PS-176','assignId':'ASN-9007','officerId':'ASN-9011','criminalId':'CRIM-101','caseCode':'CASE-2034 OFF-3034','completionPct':70, 'handling':'Reassigned',   'investigationType':'Coordinate', 'crimeType':'CYBERCRIME',        'crimeCount':2,'status':'Open',               'severity':get_severity('CYBERCRIME'),           'arrestDate':'2022-11-28','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':5, 'experienceYears':9 },
+    {'firNumber':'FIR-2026-30', 'psCode':'PS-127','assignId':'ASN-9008','officerId':'ASN-9012','criminalId':'CRIM-102','caseCode':'CASE-2035 OFF-3035','completionPct':22, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'SEXUAL ASSAULT',    'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2022-12-06','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':3, 'experienceYears':8 },
+    {'firNumber':'FIR-2026-31', 'psCode':'PS-110','assignId':'ASN-9009','officerId':'ASN-9013','criminalId':'CRIM-103','caseCode':'CASE-2036 OFF-3036','completionPct':68, 'handling':'Charge Sheet', 'investigationType':'Solo',       'crimeType':'EXTORTION',         'crimeCount':3,'status':'Open',               'severity':'High',                               'arrestDate':'2023-01-17','photoResolution':'1920x1080','remarks':'Tattoo-Ml',               'transfers':11,'experienceYears':1 },
+    {'firNumber':'FIR-2026-32', 'psCode':'PS-632','assignId':'ASN-9010','officerId':'ASN-9014','criminalId':'CRIM-104','caseCode':'CASE-2037 OFF-3037','completionPct':78, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'IDENTITY THEFT',    'crimeCount':1,'status':'Under Investigation', 'severity':'High',                               'arrestDate':'2023-02-24','photoResolution':'800x600',  'remarks':'Wearing.g',               'transfers':2, 'experienceYears':21},
+    {'firNumber':'FIR-2026-33', 'psCode':'PS-479','assignId':'ASN-9011','officerId':'ASN-9015','criminalId':'CRIM-105','caseCode':'CASE-2038 OFF-3038','completionPct':55, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'VEHICLE',           'crimeCount':3,'status':'Closed',             'severity':get_severity('VEHICLE'),              'arrestDate':'2023-03-08','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':7, 'experienceYears':4 },
+    {'firNumber':'FIR-2026-34', 'psCode':'PS-462','assignId':'ASN-9012','officerId':'ASN-9016','criminalId':'CRIM-106','caseCode':'CASE-2039 OFF-3039','completionPct':59, 'handling':'Charge Sheet', 'investigationType':'Solo',       'crimeType':'ROBBERY',           'crimeCount':2,'status':'Open',               'severity':'High',                               'arrestDate':'2023-04-19','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':3, 'experienceYears':14},
+    {'firNumber':'FIR-2026-35', 'psCode':'PS-381','assignId':'ASN-9013','officerId':'ASN-9017','criminalId':'CRIM-107','caseCode':'CASE-2040 OFF-3040','completionPct':77, 'handling':'Active',        'investigationType':'Coordinate', 'crimeType':'FIREARM',           'crimeCount':1,'status':'Open',               'severity':'High',                               'arrestDate':'2023-05-27','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':0, 'experienceYears':25},
+    {'firNumber':'FIR-2026-36', 'psCode':'PS-790','assignId':'ASN-9014','officerId':'ASN-9018','criminalId':'CRIM-108','caseCode':'CASE-2041 OFF-3041','completionPct':19, 'handling':'Interrogation','investigationType':'Joint Open', 'crimeType':'ARSON',             'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2023-06-14','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':3, 'experienceYears':2 },
+    {'firNumber':'FIR-2026-37', 'psCode':'PS-529','assignId':'ASN-9015','officerId':'ASN-9019','criminalId':'CRIM-109','caseCode':'CASE-2042 OFF-3042','completionPct':28, 'handling':'Reassigned',   'investigationType':'Solo',       'crimeType':'BURGLARY',          'crimeCount':2,'status':'Open',               'severity':get_severity('BURGLARY'),             'arrestDate':'2023-07-02','photoResolution':'800x600',  'remarks':'Tattoo-Ml evidence',      'transfers':11,'experienceYears':2 },
+    {'firNumber':'FIR-2026-38', 'psCode':'PS-457','assignId':'ASN-9016','officerId':'ASN-9020','criminalId':'CRIM-110','caseCode':'CASE-2043 OFF-3043','completionPct':65, 'handling':'Active',        'investigationType':'Coordinate', 'crimeType':'DRUG OFFENSE',      'crimeCount':4,'status':'Closed',             'severity':'High',                               'arrestDate':'2023-08-09','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':6, 'experienceYears':9 },
+    {'firNumber':'FIR-2026-39', 'psCode':'PS-645','assignId':'ASN-9017','officerId':'ASN-9021','criminalId':'CRIM-100','caseCode':'CASE-2044 OFF-3044','completionPct':44, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'EXTORTION',         'crimeCount':1,'status':'Open',               'severity':'High',                               'arrestDate':'2023-09-16','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':2, 'experienceYears':7 },
+    {'firNumber':'FIR-2026-40', 'psCode':'PS-845','assignId':'ASN-9018','officerId':'ASN-9022','criminalId':'CRIM-101','caseCode':'CASE-2045 OFF-3045','completionPct':38, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'TRAFFIC',           'crimeCount':5,'status':'Closed',             'severity':get_severity('TRAFFIC'),              'arrestDate':'2023-10-23','photoResolution':'1920x1080','remarks':'Wearing.g',               'transfers':1, 'experienceYears':18},
+    {'firNumber':'FIR-2026-41', 'psCode':'PS-961','assignId':'ASN-9019','officerId':'ASN-9003','criminalId':'CRIM-102','caseCode':'CASE-2046 OFF-3046','completionPct':62, 'handling':'Active',        'investigationType':'Coordinate', 'crimeType':'ROBBERY',           'crimeCount':3,'status':'Open',               'severity':'High',                               'arrestDate':'2023-11-12','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':5, 'experienceYears':20},
+    {'firNumber':'FIR-2026-42', 'psCode':'PS-133','assignId':'ASN-9020','officerId':'ASN-9004','criminalId':'CRIM-103','caseCode':'CASE-2047 OFF-3047','completionPct':28, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'IDENTITY THEFT',    'crimeCount':2,'status':'Under Investigation', 'severity':'High',                               'arrestDate':'2023-12-04','photoResolution':'800x600',  'remarks':'Clear visible',           'transfers':3, 'experienceYears':11},
+    {'firNumber':'FIR-2026-43', 'psCode':'PS-327','assignId':'ASN-9021','officerId':'ASN-9005','criminalId':'CRIM-104','caseCode':'CASE-2048 OFF-3048','completionPct':51, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'ARSON',             'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2024-01-19','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':4, 'experienceYears':12},
+    {'firNumber':'FIR-2026-44', 'psCode':'PS-554','assignId':'ASN-9022','officerId':'ASN-9006','criminalId':'CRIM-105','caseCode':'CASE-2049 OFF-3049','completionPct':29, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'SHOPLIFTING',       'crimeCount':6,'status':'Open',               'severity':get_severity('SHOPLIFTING'),          'arrestDate':'2024-02-25','photoResolution':'1920x1080','remarks':'Tattoo-Ml',               'transfers':11,'experienceYears':9 },
+    {'firNumber':'FIR-2026-45', 'psCode':'PS-370','assignId':'ASN-9003','officerId':'ASN-9007','criminalId':'CRIM-106','caseCode':'CASE-2050 OFF-3050','completionPct':55, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'SEXUAL ASSAULT',    'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2024-03-08','photoResolution':'1920x1080','remarks':'94% interrogation',       'transfers':4, 'experienceYears':8 },
+    {'firNumber':'FIR-2026-46', 'psCode':'PS-846','assignId':'ASN-9004','officerId':'ASN-9008','criminalId':'CRIM-107','caseCode':'CASE-2051 OFF-3051','completionPct':66, 'handling':'Charge Sheet', 'investigationType':'Solo',       'crimeType':'IDENTITY THEFT',    'crimeCount':1,'status':'Open',               'severity':'High',                               'arrestDate':'2024-04-12','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':0, 'experienceYears':5 },
+    {'firNumber':'FIR-2026-47', 'psCode':'PS-252','assignId':'ASN-9005','officerId':'ASN-9009','criminalId':'CRIM-108','caseCode':'CASE-2052 OFF-3052','completionPct':71, 'handling':'Active',        'investigationType':'Coordinate', 'crimeType':'FIREARM',           'crimeCount':2,'status':'Open',               'severity':'High',                               'arrestDate':'2024-05-22','photoResolution':'800x600',  'remarks':'Standard b',              'transfers':3, 'experienceYears':14},
+    {'firNumber':'FIR-2026-48', 'psCode':'PS-217','assignId':'ASN-9006','officerId':'ASN-9010','criminalId':'CRIM-109','caseCode':'CASE-2053 OFF-3053','completionPct':48, 'handling':'Interrogation','investigationType':'Joint Open', 'crimeType':'DRUG OFFENSE',      'crimeCount':3,'status':'Open',               'severity':'High',                               'arrestDate':'2024-06-09','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':6, 'experienceYears':5 },
+    {'firNumber':'FIR-2026-49', 'psCode':'PS-720','assignId':'ASN-9007','officerId':'ASN-9011','criminalId':'CRIM-110','caseCode':'CASE-2054 OFF-3054','completionPct':31, 'handling':'Reassigned',   'investigationType':'Solo',       'crimeType':'COUNTERFEITING',    'crimeCount':4,'status':'Under Investigation', 'severity':'High',                               'arrestDate':'2024-07-14','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':9, 'experienceYears':4 },
+    {'firNumber':'FIR-2026-50', 'psCode':'PS-421','assignId':'ASN-9008','officerId':'ASN-9012','criminalId':'CRIM-100','caseCode':'CASE-2055 OFF-3055','completionPct':93, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'TRAFFIC',           'crimeCount':2,'status':'Open',               'severity':get_severity('TRAFFIC'),              'arrestDate':'2024-08-20','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':0, 'experienceYears':15},
+    {'firNumber':'FIR-2026-51', 'psCode':'PS-430','assignId':'ASN-9009','officerId':'ASN-9013','criminalId':'CRIM-101','caseCode':'CASE-2056 OFF-3056','completionPct':15, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'HOMICIDE',          'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2024-09-01','photoResolution':'1920x1080','remarks':'Wearing glasses',         'transfers':3, 'experienceYears':17},
+    {'firNumber':'FIR-2026-52', 'psCode':'PS-424','assignId':'ASN-9010','officerId':'ASN-9014','criminalId':'CRIM-102','caseCode':'CASE-2057 OFF-3099','completionPct':39, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'SHOPLIFTING',       'crimeCount':6,'status':'Open',               'severity':get_severity('SHOPLIFTING'),          'arrestDate':'2024-10-05','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':4, 'experienceYears':6 },
+    {'firNumber':'FIR-2026-53', 'psCode':'PS-316','assignId':'ASN-9011','officerId':'ASN-9015','criminalId':'CRIM-103','caseCode':'CASE-2058 OFF-3058','completionPct':28, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'ROBBERY',           'crimeCount':3,'status':'Closed',             'severity':'High',                               'arrestDate':'2024-11-15','photoResolution':'800x600',  'remarks':'Slightly blurry',         'transfers':2, 'experienceYears':8 },
+    {'firNumber':'FIR-2026-54', 'psCode':'PS-176','assignId':'ASN-9012','officerId':'ASN-9016','criminalId':'CRIM-104','caseCode':'CASE-2059 OFF-3059','completionPct':86, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'ARSON',             'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2024-12-22','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':0, 'experienceYears':2 },
+    {'firNumber':'FIR-2026-55', 'psCode':'PS-127','assignId':'ASN-9013','officerId':'ASN-9017','criminalId':'CRIM-105','caseCode':'CASE-2060 OFF-3060','completionPct':29, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'VANDALISM',         'crimeCount':4,'status':'Open',               'severity':get_severity('VANDALISM'),            'arrestDate':'2025-01-08','photoResolution':'1920x1080','remarks':'Tattoo-Ml',               'transfers':11,'experienceYears':1 },
+    {'firNumber':'FIR-2026-56', 'psCode':'PS-110','assignId':'ASN-9014','officerId':'ASN-9018','criminalId':'CRIM-106','caseCode':'CASE-2061 OFF-3061','completionPct':55, 'handling':'Charge Sheet', 'investigationType':'Coordinate', 'crimeType':'COUNTERFEITING',    'crimeCount':2,'status':'Closed',             'severity':'High',                               'arrestDate':'2025-02-19','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':5, 'experienceYears':18},
+    {'firNumber':'FIR-2026-57', 'psCode':'PS-632','assignId':'ASN-9015','officerId':'ASN-9019','criminalId':'CRIM-107','caseCode':'CASE-2062 OFF-3062','completionPct':74, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'ASSAULT',           'crimeCount':5,'status':'Open',               'severity':'High',                               'arrestDate':'2025-03-27','photoResolution':'1920x1080','remarks':'Wearing glasses',         'transfers':1, 'experienceYears':12},
+    {'firNumber':'FIR-2026-58', 'psCode':'PS-479','assignId':'ASN-9016','officerId':'ASN-9020','criminalId':'CRIM-108','caseCode':'CASE-2063 OFF-3063','completionPct':42, 'handling':'Interrogation','investigationType':'Solo',       'crimeType':'BURGLARY',          'crimeCount':3,'status':'Under Investigation', 'severity':get_severity('BURGLARY'),             'arrestDate':'2025-04-10','photoResolution':'800x600',  'remarks':'Standard b',              'transfers':7, 'experienceYears':11},
+    {'firNumber':'FIR-2026-59', 'psCode':'PS-462','assignId':'ASN-9017','officerId':'ASN-9021','criminalId':'CRIM-109','caseCode':'CASE-2064 OFF-3064','completionPct':19, 'handling':'Reassigned',   'investigationType':'Coordinate', 'crimeType':'KIDNAPPING',        'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2025-05-14','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':4, 'experienceYears':8 },
+    {'firNumber':'FIR-2026-60', 'psCode':'PS-381','assignId':'ASN-9018','officerId':'ASN-9022','criminalId':'CRIM-110','caseCode':'CASE-2065 OFF-3065','completionPct':61, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'FRAUD',             'crimeCount':2,'status':'Open',               'severity':get_severity('FRAUD'),                'arrestDate':'2025-06-02','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':0, 'experienceYears':6 },
+    {'firNumber':'FIR-2026-61', 'psCode':'PS-790','assignId':'ASN-9019','officerId':'ASN-9003','criminalId':'CRIM-100','caseCode':'CASE-2066 OFF-3066','completionPct':33, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'ASSAULT',           'crimeCount':4,'status':'Open',               'severity':'High',                               'arrestDate':'2025-07-18','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':3, 'experienceYears':14},
+    {'firNumber':'FIR-2026-62', 'psCode':'PS-529','assignId':'ASN-9020','officerId':'ASN-9004','criminalId':'CRIM-101','caseCode':'CASE-2067 OFF-3067','completionPct':79, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'FIREARM',           'crimeCount':3,'status':'Closed',             'severity':'High',                               'arrestDate':'2025-08-25','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':5, 'experienceYears':19},
+    {'firNumber':'FIR-2026-63', 'psCode':'PS-457','assignId':'ASN-9021','officerId':'ASN-9005','criminalId':'CRIM-102','caseCode':'CASE-2068 OFF-3068','completionPct':22, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'CYBERCRIME',        'crimeCount':2,'status':'Under Investigation', 'severity':get_severity('CYBERCRIME'),           'arrestDate':'2025-09-12','photoResolution':'800x600',  'remarks':'Wearing glasses',         'transfers':2, 'experienceYears':7 },
+    {'firNumber':'FIR-2026-64', 'psCode':'PS-645','assignId':'ASN-9022','officerId':'ASN-9006','criminalId':'CRIM-103','caseCode':'CASE-2069 OFF-3069','completionPct':48, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'HUMAN TRAFFICKING', 'crimeCount':1,'status':'Under Investigation', 'severity':'Critical',                           'arrestDate':'2025-10-04','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':0, 'experienceYears':2 },
+    {'firNumber':'FIR-2026-65', 'psCode':'PS-845','assignId':'ASN-9003','officerId':'ASN-9007','criminalId':'CRIM-104','caseCode':'CASE-2070 OFF-3070','completionPct':37, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'SEXUAL ASSAULT',    'crimeCount':1,'status':'Open',               'severity':'Critical',                           'arrestDate':'2025-11-20','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':4, 'experienceYears':8 },
+    {'firNumber':'FIR-2026-66', 'psCode':'PS-961','assignId':'ASN-9004','officerId':'ASN-9008','criminalId':'CRIM-105','caseCode':'CASE-2071 OFF-3071','completionPct':61, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'COUNTERFEITING',    'crimeCount':3,'status':'Closed',             'severity':'High',                               'arrestDate':'2025-12-08','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':9, 'experienceYears':4 },
+    {'firNumber':'FIR-2026-67', 'psCode':'PS-133','assignId':'ASN-9005','officerId':'ASN-9009','criminalId':'CRIM-106','caseCode':'CASE-2072 OFF-3072','completionPct':55, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'ROBBERY',           'crimeCount':2,'status':'Open',               'severity':'High',                               'arrestDate':'2026-01-03','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':4, 'experienceYears':6 },
+    {'firNumber':'FIR-2026-68', 'psCode':'PS-327','assignId':'ASN-9006','officerId':'ASN-9010','criminalId':'CRIM-107','caseCode':'CASE-2073 OFF-3073','completionPct':94, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'DRUG OFFENSE',      'crimeCount':6,'status':'Under Investigation', 'severity':'High',                               'arrestDate':'2026-01-17','photoResolution':'800x600',  'remarks':'Tattoo-Ml',               'transfers':11,'experienceYears':9 },
+    {'firNumber':'FIR-2026-69', 'psCode':'PS-554','assignId':'ASN-9007','officerId':'ASN-9011','criminalId':'CRIM-108','caseCode':'CASE-2074 OFF-3074','completionPct':75, 'handling':'Charge Sheet', 'investigationType':'Joint Open', 'crimeType':'IDENTITY THEFT',    'crimeCount':1,'status':'Open',               'severity':'High',                               'arrestDate':'2026-02-08','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':6, 'experienceYears':8 },
+    {'firNumber':'FIR-2026-70', 'psCode':'PS-370','assignId':'ASN-9008','officerId':'ASN-9012','criminalId':'CRIM-109','caseCode':'CASE-2075 OFF-3075','completionPct':31, 'handling':'Active',        'investigationType':'Solo',       'crimeType':'TRAFFIC',           'crimeCount':8,'status':'Closed',             'severity':get_severity('TRAFFIC'),              'arrestDate':'2026-02-21','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':17,'experienceYears':21},
+    {'firNumber':'FIR-2026-71', 'psCode':'PS-846','assignId':'ASN-9009','officerId':'ASN-9013','criminalId':'CRIM-110','caseCode':'CASE-2076 OFF-3076','completionPct':19, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'ASSAULT',           'crimeCount':4,'status':'Under Investigation', 'severity':'High',                               'arrestDate':'2026-03-05','photoResolution':'1920x1080','remarks':'Wearing glasses',         'transfers':1, 'experienceYears':6 },
+    {'firNumber':'FIR-2026-72', 'psCode':'PS-252','assignId':'ASN-9010','officerId':'ASN-9014','criminalId':'CRIM-100','caseCode':'CASE-2077 OFF-3077','completionPct':82, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'BURGLARY',          'crimeCount':3,'status':'Open',               'severity':get_severity('BURGLARY'),             'arrestDate':'2026-03-18','photoResolution':'1920x1080','remarks':'Slightly blurry',         'transfers':3, 'experienceYears':15},
+    {'firNumber':'FIR-2026-73', 'psCode':'PS-217','assignId':'ASN-9011','officerId':'ASN-9015','criminalId':'CRIM-101','caseCode':'CASE-2078 OFF-3078','completionPct':11, 'handling':'Charge Sheet', 'investigationType':'Solo',       'crimeType':'VANDALISM',         'crimeCount':7,'status':'Open',               'severity':get_severity('VANDALISM'),            'arrestDate':'2026-04-01','photoResolution':'800x600',  'remarks':'Standard b',              'transfers':5, 'experienceYears':18},
+    {'firNumber':'FIR-2026-74', 'psCode':'PS-720','assignId':'ASN-9012','officerId':'ASN-9016','criminalId':'CRIM-102','caseCode':'CASE-2079 OFF-3079','completionPct':73, 'handling':'Interrogation','investigationType':'Coordinate', 'crimeType':'FIREARM',           'crimeCount':2,'status':'Open',               'severity':'High',                               'arrestDate':'2026-04-05','photoResolution':'1920x1080','remarks':'Clear visible',           'transfers':4, 'experienceYears':7 },
+    {'firNumber':'FIR-2026-75', 'psCode':'PS-421','assignId':'ASN-9013','officerId':'ASN-9017','criminalId':'CRIM-103','caseCode':'CASE-2080 OFF-3080','completionPct':39, 'handling':'Active',        'investigationType':'Joint Open', 'crimeType':'PUBLIC INTOXICATION','crimeCount':4,'status':'Closed',             'severity':get_severity('PUBLIC INTOXICATION'), 'arrestDate':'2026-04-08','photoResolution':'1920x1080','remarks':'Standard b',              'transfers':6, 'experienceYears':24},
+]
+
+# ── Auth Users ────────────────────────────────────────────────
+USERS = {
+    'public':  {'password': 'public123', 'role': 'public',  'display': 'Public'},
+    'officer': {'password': 'police123', 'role': 'police',  'display': 'Police Officer'},
+    'admin':   {'password': 'govt2026',  'role': 'admin',   'display': 'Govt Official'},
+}
+
+
+# ══════════════════════════════════════════════════════════════
+#  API ROUTES
+# ══════════════════════════════════════════════════════════════
+
