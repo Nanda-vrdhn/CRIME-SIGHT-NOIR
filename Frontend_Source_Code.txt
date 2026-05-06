@@ -1,0 +1,1513 @@
+=================================================================
+CRIME SIGHT NOIR - FRONTEND SOURCE CODE (HTML / CSS / JS)
+=================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Crime Sight Noir v2 — Intelligence Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --p9:#020617;--p8:#0f172a;--p7:#1e293b;--p6:#1e3a8a;--p5:#1d4ed8;--p4:#2563eb;--p3:#3b82f6;
+  --bg:#000000;--bg95:#020617;--bg9:#0f172a;--bg8:#1e293b;--bg7:#334155;
+  --tx:#f8fafc;--tx2:#cbd5e1;--txm:#94a3b8;
+  --crit:#ef4444;--hi:#f97316;--med:#eab308;--ok:#3b82f6;--opn:#06b6d4;
+  --gb:rgba(0,0,0,.85);--gbr:rgba(59,130,246,.3);--gbrh:rgba(59,130,246,.6);
+  --r1:0px;--r2:2px;--r3:4px;--r4:8px;--nh:56px
+}
+
+/* DOME ENTRANCE & INTRO */
+#dome-entrance { position: fixed; inset: 0; background: #020000; z-index: 99999; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s ease 3.5s, visibility 0.8s ease 3.5s; }
+#dome-entrance.open { opacity: 0; visibility: hidden; pointer-events: none; }
+.dome-wrapper { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; cursor: pointer; background: radial-gradient(circle at center, #0a0002, #000); }
+.dome-slice { position: absolute; width: 150vmax; height: 150vmax; top: 50%; left: 50%; background: linear-gradient(to right, #0f172a, #020000); border-left: 2px solid rgba(59,130,246,0.6); border-top: 1px solid rgba(59,130,246,0.2); transform-origin: 0 0; clip-path: polygon(0 0, 100% 0, 100% 100%); transition: transform 4s cubic-bezier(0.5, 0, 0.1, 1); }
+.s1 { transform: rotate(0deg); } .s2 { transform: rotate(45deg); } .s3 { transform: rotate(90deg); } .s4 { transform: rotate(135deg); } .s5 { transform: rotate(180deg); } .s6 { transform: rotate(225deg); } .s7 { transform: rotate(270deg); } .s8 { transform: rotate(315deg); }
+#dome-entrance.open .s1 { transform: rotate(0deg) translate(50vmax, 50vmax) rotate(45deg); }
+#dome-entrance.open .s2 { transform: rotate(45deg) translate(50vmax, 50vmax) rotate(45deg); }
+#dome-entrance.open .s3 { transform: rotate(90deg) translate(50vmax, 50vmax) rotate(45deg); }
+#dome-entrance.open .s4 { transform: rotate(135deg) translate(50vmax, 50vmax) rotate(45deg); }
+#dome-entrance.open .s5 { transform: rotate(180deg) translate(50vmax, 50vmax) rotate(45deg); }
+#dome-entrance.open .s6 { transform: rotate(225deg) translate(50vmax, 50vmax) rotate(45deg); }
+#dome-entrance.open .s7 { transform: rotate(270deg) translate(50vmax, 50vmax) rotate(45deg); }
+#dome-entrance.open .s8 { transform: rotate(315deg) translate(50vmax, 50vmax) rotate(45deg); }
+.dome-center { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; pointer-events: none; color: #3b82f6; text-shadow: 0 0 20px rgba(59,130,246,0.8); transition: opacity 0.4s; }
+#dome-entrance.open .dome-center { opacity: 0; }
+.dome-logo { font-family: 'Rajdhani', sans-serif; font-size: 80px; font-weight: bold; line-height: 1; filter: drop-shadow(0 0 10px rgba(59,130,246,0.5)); }
+.dome-text { font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 0.5em; margin-top: 15px; }
+.dome-wrapper:hover .dome-slice { box-shadow: inset 0 0 50px rgba(59,130,246,0.1); }
+.dome-wrapper:hover .dome-center { transform: scale(1.05); text-shadow: 0 0 30px #3b82f6; }
+
+#intro-sequence { position: fixed; inset: 0; background: radial-gradient(circle at center, #100005, #000); z-index: 99998; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.5s ease; flex-direction: column; }
+#intro-sequence.active { opacity: 1; visibility: visible; }
+.intro-title { font-family: 'Rajdhani', sans-serif; font-size: 54px; color: #3b82f6; text-shadow: 0 0 20px #3b82f6; letter-spacing: 0.2em; font-weight: bold; opacity: 0; transform: scale(0.9); transition: all 2s cubic-bezier(0.1, 1, 0.2, 1); text-transform: uppercase; }
+.intro-title.show { opacity: 1; transform: scale(1); letter-spacing: 0.3em; }
+.intro-subtitle { font-family: 'Orbitron', sans-serif; font-size: 14px; color: #ffb3c6; margin-top: 10px; opacity: 0; transition: opacity 1s ease 1s; }
+.intro-subtitle.show { opacity: 1; }
+
+#login-screen { opacity: 0; pointer-events: none; transition: opacity 1s ease; }
+#login-screen.visible { opacity: 1; pointer-events: auto; }
+
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;overflow:hidden}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;overflow-y:auto;padding:20px 0}
+.lcard{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r4);padding:32px 34px;width:420px;display:flex;flex-direction:column;align-items:center;gap:13px;box-shadow:0 0 80px rgba(59,130,246,.2);position:relative}
+.lcard.wide{width:640px}
+.llogo{font-size:44px;animation:lg 3s ease-in-out infinite alternate}
+@keyframes lg{from{filter:drop-shadow(0 0 10px rgba(59,130,246,.5))}to{filter:drop-shadow(0 0 24px rgba(59,130,246,.9))}}
+.ltitle{font-family:'Rajdhani',serif;font-size:26px;font-weight:700;color:var(--p3)}
+.lsub{font-size:10px;color:var(--txm);letter-spacing:.15em;text-transform:uppercase;margin-top:-4px}
+/* Auth Tabs */
+.ltabs{display:flex;width:100%;background:var(--bg9);border:1px solid var(--gbr);border-radius:var(--r2);padding:3px;gap:3px}
+.ltab{flex:1;padding:7px;border:none;background:transparent;color:var(--txm);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:var(--r1);transition:.2s}
+.ltab.active{background:linear-gradient(135deg,var(--p6),var(--p8));color:#fff;box-shadow:0 2px 12px rgba(59,130,246,.4)}
+/* Form sections */
+.lform{width:100%;display:flex;flex-direction:column;gap:11px}
+.lform.hidden{display:none}
+.linput{width:100%;padding:10px 14px;background:var(--bg7);border:1px solid var(--gbr);border-radius:var(--r2);color:var(--tx);font-size:13px;outline:none;transition:.2s}
+.linput:focus{border-color:var(--p5);box-shadow:0 0 0 3px rgba(59,130,246,.12)}.linput::placeholder{color:var(--txm)}
+.lbtn{width:100%;padding:11px;background:linear-gradient(135deg,var(--p6),var(--p8));border:none;border-radius:var(--r2);color:#fff;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:.2s}
+.lbtn:hover{box-shadow:0 0 20px rgba(59,130,246,.4)}
+.lhints{width:100%;background:var(--bg9);border:1px solid rgba(255,255,255,.05);border-radius:var(--r1);padding:11px 14px;display:flex;flex-direction:column;gap:5px}
+.lhr{display:flex;justify-content:space-between;font-size:10px}.lrole{color:var(--p4);font-weight:600;text-transform:uppercase;letter-spacing:.05em}.lcred{color:var(--txm);font-family:monospace}
+.lerr{color:#fca5a5;font-size:11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:var(--r1);padding:7px 12px;width:100%;text-align:center}
+.lsucc{color:#86efac;font-size:11px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:var(--r1);padding:7px 12px;width:100%;text-align:center}
+/* Role Cards */
+.role-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;width:100%}
+.rcard{background:var(--bg9);border:2px solid rgba(255,255,255,.06);border-radius:var(--r2);padding:14px 12px;cursor:pointer;transition:all .22s;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;position:relative;overflow:hidden}
+.rcard::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,130,246,.08),transparent);opacity:0;transition:.22s}
+.rcard:hover{border-color:var(--gbr);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.3)}.rcard:hover::after{opacity:1}
+.rcard.sel{border-color:var(--p5);background:rgba(59,130,246,.1);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.rcard.sel::after{opacity:1}
+.rcard-check{position:absolute;top:7px;right:7px;width:16px;height:16px;border-radius:50%;background:var(--p6);display:none;align-items:center;justify-content:center;font-size:9px;color:#fff}
+.rcard.sel .rcard-check{display:flex}
+.rcard-icon{font-size:26px;margin-bottom:2px}
+.rcard-name{font-family:'Rajdhani',serif;font-size:14px;font-weight:700;color:var(--tx)}
+.rcard-badge{font-size:8px;padding:2px 8px;border-radius:999px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
+.rcard-badge.pub{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.rcard-badge.pol{background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3)}
+.rcard-badge.gov{background:rgba(234,179,8,.15);color:#fde047;border:1px solid rgba(234,179,8,.3)}
+.rcard-perms{list-style:none;display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;margin-top:4px}
+.rcard-perms li{font-size:9px;color:var(--tx2);display:flex;align-items:center;gap:4px}
+.rcard-perms li::before{content:'✓';color:var(--p4);font-size:8px;flex-shrink:0}
+.rcard-perms li.no{color:var(--txm)}.rcard-perms li.no::before{content:'✕';color:var(--txm)}
+.su-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--txm);font-weight:600;align-self:flex-start}
+.lswitch{font-size:11px;color:var(--txm);text-align:center}.lswitch span{color:var(--p4);cursor:pointer;font-weight:600}.lswitch span:hover{color:var(--p3)}
+
+/* NAV */
+#app{height:100%;display:flex;flex-direction:column}
+.navbar{height:var(--nh);background:rgba(10,10,13,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--gbr);display:flex;align-items:center;padding:0 14px;gap:12px;flex-shrink:0;z-index:1000}
+.nlogo{width:32px;height:32px;background:linear-gradient(135deg,var(--p6),var(--p8));border-radius:var(--r1);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 12px rgba(59,130,246,.5);flex-shrink:0}
+.nbrand{font-family:'Rajdhani',serif;font-size:16px;font-weight:600;color:var(--p3);flex-shrink:0}
+.ntabs{display:flex;gap:2px;flex:1;justify-content:center}
+.ntab{background:none;border:none;color:var(--txm);font-size:11px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:.18s}
+.ntab:hover{color:var(--p3);background:rgba(59,130,246,.1)}.ntab.active{color:var(--p3);background:rgba(59,130,246,.18);border:1px solid rgba(59,130,246,.3)}
+.nright{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btnfir{background:linear-gradient(135deg,var(--p6),var(--p8));border:none;color:#fff;font-size:10px;font-weight:700;padding:6px 12px;border-radius:999px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:.2s;white-space:nowrap}
+.btnfir:hover{box-shadow:0 0 14px rgba(59,130,246,.5)}
+.rbadge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.08em;text-transform:uppercase;border:1px solid}
+.rbadge.public{color:#86efac;background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3)}
+.rbadge.police{color:#93c5fd;background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3)}
+.rbadge.admin{color:#fde047;background:rgba(234,179,8,.1);border-color:rgba(234,179,8,.3)}
+.logoutbtn{background:none;border:1px solid rgba(255,255,255,.1);color:var(--txm);font-size:10px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:.18s}
+.logoutbtn:hover{border-color:rgba(239,68,68,.4);color:#fca5a5}
+
+/* SECTIONS */
+.scwrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.section{flex:1;overflow:hidden;display:flex;flex-direction:column}.section.hidden{display:none!important}
+
+/* MAP */
+#section-map{flex-direction:row}
+.maparea{flex:1}#main-map{width:100%;height:100%}
+.leaflet-tile{filter:brightness(.88) saturate(.8)}.leaflet-container{background:#000000!important}
+.pulse-marker{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pulse-ring{position:absolute;width:34px;height:34px;border-radius:50%;border:2px solid var(--p5);animation:pr 2s ease-out infinite;opacity:0}.pulse-ring:nth-child(2){animation-delay:.7s}
+.pulse-dot{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--p4),var(--p7));border:2px solid var(--p3);box-shadow:0 0 10px var(--p5);position:relative;z-index:2;transition:transform .2s}
+.pulse-marker:hover .pulse-dot{transform:scale(1.4)}.pulse-marker.critical .pulse-dot{background:radial-gradient(circle at 35% 35%,#f87171,var(--crit));border-color:#fca5a5;box-shadow:0 0 10px var(--crit)}.pulse-marker.critical .pulse-ring{border-color:var(--crit)}.pulse-marker.high .pulse-dot{background:radial-gradient(circle at 35% 35%,#fb923c,var(--hi));border-color:#fdba74;box-shadow:0 0 10px var(--hi)}.pulse-marker.high .pulse-ring{border-color:var(--hi)}
+@keyframes pr{0%{transform:scale(.5);opacity:.8}100%{transform:scale(2.2);opacity:0}}
+.leaflet-tooltip.stt{background:var(--gb);border:1px solid var(--gbr);color:var(--p3);font-size:12px;padding:3px 9px;border-radius:var(--r1);backdrop-filter:blur(12px);white-space:nowrap}.leaflet-tooltip.stt::before{display:none}
+
+/* SIDE PANEL */
+.sidepanel{width:360px;flex-shrink:0;background:var(--gb);backdrop-filter:blur(20px);border-left:1px solid var(--gbr);display:flex;flex-direction:column;overflow:hidden}
+.pd-default{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:32px;text-align:center;gap:12px}.pd-default.hidden{display:none}
+.pd-icon{font-size:48px;opacity:.4;animation:fl 4s ease-in-out infinite}@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.pd-title{font-family:'Rajdhani',serif;font-size:22px;font-weight:700;color:var(--p3)}.pd-desc{font-size:12px;color:var(--txm);line-height:1.6;max-width:210px}
+.pd-hints{display:flex;flex-direction:column;gap:7px;margin-top:8px;align-self:center}
+.hint-item{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--tx2)}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}.dot.c{background:var(--crit);box-shadow:0 0 5px var(--crit)}.dot.h{background:var(--hi);box-shadow:0 0 5px var(--hi)}.dot.m{background:var(--med);box-shadow:0 0 5px var(--med)}
+.pd-content{display:none;flex-direction:column;flex:1;overflow:hidden}.pd-content.show{display:flex}
+.stn-hdr{padding:14px 16px 12px;border-bottom:1px solid var(--gbr);background:linear-gradient(180deg,rgba(59,130,246,.06) 0%,transparent 100%);flex-shrink:0}
+.stn-back{font-size:11px;color:var(--p4);background:none;border:none;cursor:pointer;padding:0;margin-bottom:8px;display:block;letter-spacing:.04em}.stn-back:hover{color:var(--p3)}
+.stn-name{font-family:'Rajdhani',serif;font-size:17px;font-weight:700;color:var(--tx);line-height:1.2}.stn-meta{font-size:10px;color:var(--txm);text-transform:uppercase;letter-spacing:.05em}
+.stn-badges{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.psbadge{font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(59,130,246,.2);border:1px solid var(--p6);color:var(--p3);letter-spacing:.07em;text-transform:uppercase;font-weight:600}
+.stn-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gbr);border-bottom:1px solid var(--gbr);flex-shrink:0}
+.ss{background:var(--bg95);display:flex;flex-direction:column;align-items:center;padding:7px 4px;gap:2px}
+.ss.c1{background:rgba(239,68,68,.05)}.ss.c2{background:rgba(96,165,250,.05)}.ss.c3{background:rgba(34,197,94,.05)}
+.ssv{font-size:18px;font-weight:700;color:var(--p3);line-height:1}.ss.c1 .ssv{color:var(--crit)}.ss.c2 .ssv{color:var(--opn)}.ss.c3 .ssv{color:var(--ok)}
+.ssl{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--txm)}
+.filterrow{display:flex;gap:4px;padding:8px 10px;overflow-x:auto;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.05);scrollbar-width:none}.filterrow::-webkit-scrollbar{display:none}
+.fbtn{font-size:9px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--gbr);background:transparent;color:var(--txm);cursor:pointer;white-space:nowrap;letter-spacing:.05em;text-transform:uppercase;transition:.18s}
+.fbtn.active,.fbtn:hover{background:rgba(59,130,246,.2);border-color:var(--p6);color:var(--p3)}
+.caselist{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:var(--p9) transparent}.caselist::-webkit-scrollbar{width:3px}.caselist::-webkit-scrollbar-thumb{background:var(--p9);border-radius:2px}
+.ccard{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r2);padding:9px 11px;cursor:pointer;transition:.2s;animation:fu .3s ease both;position:relative;overflow:hidden}
+.ccard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;background:var(--p6)}.ccard.critical::before{background:var(--crit)}.ccard.high::before{background:var(--hi)}.ccard.medium::before{background:var(--med)}
+.ccard:hover{border-color:var(--gbrh);background:var(--bg7);transform:translateX(2px)}@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.cctop{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:5px}
+.ccfir{font-family:'Rajdhani',serif;font-size:14px;font-weight:700;color:var(--p3)}
+.ccbadges{display:flex;gap:3px;align-items:center;flex-shrink:0}
+.sbadge{font-size:8px;font-weight:700;padding:2px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.07em}
+.sbadge.Critical{background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}.sbadge.High{background:rgba(249,115,22,.18);color:#fdba74;border:1px solid rgba(249,115,22,.4)}.sbadge.Medium{background:rgba(234,179,8,.18);color:#fde047;border:1px solid rgba(234,179,8,.4)}
+.spill{font-size:8px;font-weight:600;padding:2px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
+.spill.Open{background:rgba(96,165,250,.12);color:#93c5fd;border:1px solid rgba(96,165,250,.3)}.spill.Closed{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.3)}.spill.Under{background:rgba(234,179,8,.12);color:#fde047;border:1px solid rgba(234,179,8,.3)}
+.ccinfo{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px}.cci{display:flex;flex-direction:column;gap:0}.ccl{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--txm)}.ccv{font-size:10px;color:var(--tx2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbar{margin-top:5px;height:2px;background:rgba(255,255,255,.06);border-radius:1px;overflow:hidden}.pfill{height:100%;border-radius:1px;background:linear-gradient(90deg,var(--p7),var(--p5))}
+.empty-st{display:flex;flex-direction:column;align-items:center;gap:7px;padding:28px;text-align:center;color:var(--txm);font-size:11px}.empty-st .ei{font-size:30px;opacity:.3}
+
+/* CRIMINAL INTEL ROW (station panel) */
+.crim-row{padding:7px 10px;border-bottom:1px solid var(--gbr);background:rgba(239,68,68,.03);flex-shrink:0}
+.crim-row-title{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--txm);margin-bottom:5px;font-weight:600;display:flex;align-items:center;gap:5px}
+.crim-row-title span{background:rgba(239,68,68,.2);color:#fca5a5;border-radius:999px;padding:0 5px;font-size:9px}
+.crim-chips{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}.crim-chips::-webkit-scrollbar{display:none}
+.cchip{display:flex;align-items:center;gap:4px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:999px;padding:3px 9px 3px 5px;cursor:pointer;white-space:nowrap;transition:.18s;flex-shrink:0}
+.cchip:hover{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.45);transform:translateY(-1px)}
+.cchip-av{font-size:11px}.cchip-name{font-size:9px;color:#fca5a5;font-weight:600}.cchip-cnt{font-size:8px;color:var(--txm);margin-left:2px}
+/* Connection line legend */
+.conn-legend{position:absolute;bottom:10px;left:10px;z-index:800;background:rgba(10,10,13,.9);border:1px solid var(--gbr);border-radius:var(--r2);padding:8px 12px;font-size:9px;color:var(--txm);display:none;backdrop-filter:blur(12px)}
+.conn-legend.show{display:block}.cl-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}.cl-line{height:2px;width:20px;border-radius:1px}.cl-line.c{background:#ef4444}.cl-line.h{background:#f97316}.cl-line.m{background:#7c3aed}
+
+/* SCROLLABLE SECTIONS */
+#section-analytics,#section-officers,#section-criminals{overflow-y:auto;padding:20px 24px;gap:18px}
+/* SECTION HEADER */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;flex-shrink:0}
+.sec-hdr h2{font-family:'Rajdhani',serif;font-size:24px;font-weight:700;color:var(--p3)}.sec-hdr p{font-size:11px;color:var(--txm);margin-top:2px;letter-spacing:.04em}
+.hactions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sinput{padding:7px 12px;background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r2);color:var(--tx);font-size:12px;outline:none;transition:.2s;min-width:220px}.sinput:focus{border-color:var(--p5)}.sinput::placeholder{color:var(--txm)}
+.btnact{background:linear-gradient(135deg,var(--p6),var(--p8));border:none;color:#fff;font-size:10px;font-weight:700;padding:7px 14px;border-radius:var(--r1);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:.2s;white-space:nowrap}.btnact:hover{box-shadow:0 0 14px rgba(59,130,246,.4)}
+
+/* KPI */
+.kpigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;flex-shrink:0}
+.kpi{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r3);padding:18px;display:flex;flex-direction:column;gap:3px;transition:.2s}.kpi:hover{transform:translateY(-2px)}
+.kpi.kc{border-color:rgba(239,68,68,.4)}.kpi.ko{border-color:rgba(96,165,250,.4)}.kpi.kg{border-color:rgba(34,197,94,.4)}
+.knum{font-size:38px;font-weight:700;color:var(--p3);line-height:1}.kpi.kc .knum{color:var(--crit)}.kpi.ko .knum{color:var(--opn)}.kpi.kg .knum{color:var(--ok)}
+.klbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--txm)}.ksub{font-size:11px;color:var(--tx2);margin-top:2px}
+
+/* CHARTS */
+.chgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;flex-shrink:0}
+.chbox{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r3);padding:18px}.chbox h3{font-family:'Rajdhani',serif;font-size:15px;color:var(--p3);margin-bottom:10px}
+.chbox canvas{max-height:220px}
+
+/* GRIDS */
+.owgrid,.crgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.owcard,.crcard{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r2);padding:14px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.owcard::before,.crcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;background:var(--p6)}
+.owcard:hover,.crcard:hover{border-color:var(--gbrh);background:var(--bg7);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.ctop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.cavatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.oav{background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3)}.crav{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3)}
+.ccount{font-size:22px;font-weight:700;color:var(--p3);line-height:1}.ccountlbl{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--txm);margin-top:1px}
+.cname{font-family:'Rajdhani',serif;font-size:17px;font-weight:700;color:var(--tx);margin-bottom:3px}.csub{font-size:10px;color:var(--txm);text-transform:uppercase;letter-spacing:.05em}
+.ctags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.ctag{font-size:9px;padding:2px 7px;border-radius:999px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+.tblu{background:rgba(96,165,250,.12);color:#93c5fd;border:1px solid rgba(96,165,250,.3)}.tred{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}.tora{background:rgba(249,115,22,.12);color:#fdba74;border:1px solid rgba(249,115,22,.3)}.tyel{background:rgba(234,179,8,.12);color:#fde047;border:1px solid rgba(234,179,8,.3)}.tgrn{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.3)}.tpur{background:rgba(59,130,246,.18);color:var(--p3);border:1px solid var(--gbr)}
+
+/* DETAIL PANELS */
+.detpanel{position:fixed;top:var(--nh);right:0;bottom:0;width:500px;background:var(--gb);backdrop-filter:blur(24px);border-left:1px solid var(--gbr);z-index:500;display:flex;flex-direction:column;overflow:hidden;animation:sfr .3s cubic-bezier(.25,.46,.45,.94) both}
+@keyframes sfr{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.dphdr{padding:18px;border-bottom:1px solid var(--gbr);background:linear-gradient(180deg,rgba(59,130,246,.06) 0%,transparent 100%)}
+.dpback{font-size:11px;color:var(--p4);background:none;border:none;cursor:pointer;padding:0;margin-bottom:8px;display:block;letter-spacing:.04em;transition:.18s}.dpback:hover{color:var(--p3)}
+.dp-av{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.dp-av.o{background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3)}.dp-av.c{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3)}
+.dp-title{font-family:'Rajdhani',serif;font-size:20px;font-weight:700;color:var(--tx)}.dp-sub{font-size:10px;color:var(--txm);letter-spacing:.07em;text-transform:uppercase;margin-top:3px}
+.dpbody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:var(--p9) transparent}
+.dpstats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gbr);border-radius:var(--r2);overflow:hidden}
+.dps{background:var(--bg95);display:flex;flex-direction:column;align-items:center;padding:9px 4px;gap:2px}
+.dpsv{font-size:18px;font-weight:700;color:var(--p3);line-height:1}.dpsv.r{color:var(--crit)}.dpsv.b{color:var(--opn)}.dpsv.g{color:var(--ok)}
+.dpsl{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--txm)}
+.dpsectitle{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--txm);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05);margin-top:2px}
+/* mini map */
+.mmwrap{border:1px solid var(--gbr);border-radius:var(--r2);overflow:hidden}
+.mmtitle{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--p4);padding:9px 12px;border-bottom:1px solid var(--gbr);background:var(--bg9);font-weight:600}
+#crim-mini-map{height:210px;background:#0a0a0c}
+.leaflet-popup-content-wrapper{background:rgba(18,18,28,.95)!important;border:1px solid rgba(59,130,246,.4)!important;border-radius:8px!important;box-shadow:0 8px 24px rgba(0,0,0,.5)!important}
+.leaflet-popup-tip{background:rgba(18,18,28,.95)!important}
+.leaflet-popup-close-button{color:#a78bfa!important}
+/* mini case cards */
+.mcc{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r1);padding:9px 11px;position:relative;overflow:hidden}
+.mcc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px;background:var(--p6)}.mcc.cr::before{background:var(--crit)}.mcc.hi::before{background:var(--hi)}.mcc.me::before{background:var(--med)}
+.mcctop{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}.mccfir{font-family:'Rajdhani',serif;font-size:13px;font-weight:700;color:var(--p3)}.mccmeta{font-size:10px;color:var(--tx2)}
+
+/* MODALS */
+.movl{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);z-index:2000;display:flex;align-items:center;justify-content:center;animation:fi .2s ease}.movl.hidden{display:none}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+.fmodal{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r4);padding:26px;max-width:580px;width:94%;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.6);animation:mi .3s cubic-bezier(.25,.46,.45,.94) both;max-height:88vh;overflow-y:auto}
+@keyframes mi{from{opacity:0;transform:scale(.94) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.fmtitle{font-family:'Rajdhani',serif;font-size:22px;font-weight:700;color:var(--p3);margin-bottom:18px;padding-right:30px}
+.fmclose{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--txm);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:.18s}.fmclose:hover{background:rgba(239,68,68,.2);color:#fca5a5;border-color:rgba(239,68,68,.4)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fg{display:flex;flex-direction:column;gap:4px}.fg.full{grid-column:1/-1}
+.flbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--txm);font-weight:600}
+.fctl{padding:8px 11px;background:var(--bg7);border:1px solid var(--gbr);border-radius:var(--r1);color:var(--tx);font-size:12px;outline:none;transition:.2s;width:100%;font-family:'Rajdhani',sans-serif}
+.fctl:focus{border-color:var(--p5);box-shadow:0 0 0 2px rgba(59,130,246,.12)}.fctl::placeholder{color:var(--txm)}
+select.fctl option{background:var(--bg8)}
+.factions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;grid-column:1/-1}
+.fsubmit{background:linear-gradient(135deg,var(--p6),var(--p8));border:none;color:#fff;font-size:11px;font-weight:700;padding:9px 22px;border-radius:var(--r1);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:.2s}.fsubmit:hover{box-shadow:0 0 14px rgba(59,130,246,.5)}
+.fcancel{background:transparent;border:1px solid var(--gbr);color:var(--txm);font-size:11px;padding:9px 18px;border-radius:var(--r1);cursor:pointer;transition:.18s}.fcancel:hover{border-color:var(--gbrh);color:var(--p3)}
+
+/* CASE DETAIL MODAL */
+.cdmovl{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:3000;display:flex;align-items:center;justify-content:center;animation:fi .2s ease}.cdmovl.hidden{display:none}
+.cdm{background:var(--bg8);border:1px solid var(--gbr);border-radius:var(--r4);padding:24px;max-width:540px;width:92%;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.6);animation:mi .3s cubic-bezier(.25,.46,.45,.94) both;max-height:88vh;overflow-y:auto}
+.cdmc{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--txm);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:.18s}.cdmc:hover{background:rgba(239,68,68,.2);color:#fca5a5}
+.cdmfir{font-family:'Rajdhani',serif;font-size:24px;font-weight:700;color:var(--p3);margin-bottom:7px}
+.cdmbadges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.cdmgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cdmf{background:var(--bg9);border:1px solid rgba(255,255,255,.05);border-radius:var(--r1);padding:8px 10px}.cdmf.full{grid-column:1/-1}
+.cdmfl{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--txm);margin-bottom:3px}.cdmfv{font-size:11px;color:var(--tx);font-weight:500}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#86efac;padding:9px 18px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;z-index:9999;animation:ti .3s ease both;backdrop-filter:blur(12px)}
+.toast.hidden{display:none}@keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+*{scrollbar-width:thin;scrollbar-color:#3b0764 transparent}*::-webkit-scrollbar{width:4px;height:4px}*::-webkit-scrollbar-thumb{background:#3b0764;border-radius:2px}
+
+/* ========================================================
+   MOBILE RESPONSIVE — Any Device
+   ======================================================== */
+
+/* ── Mobile Bottom Nav ── */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:1100;background:rgba(10,10,13,.97);backdrop-filter:blur(20px);border-top:1px solid var(--gbr);padding:6px 0 env(safe-area-inset-bottom,6px);flex-direction:row;align-items:center;justify-content:space-around}
+.mnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--txm);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:5px 10px;border-radius:var(--r2);transition:.18s;min-width:56px}
+.mnav-btn .mni{font-size:20px;line-height:1}
+.mnav-btn.active{color:var(--p3);background:rgba(59,130,246,.15)}
+.mnav-btn:hover{color:var(--p3)}
+
+/* ── Map panel toggle (mobile) ── */
+.map-panel-toggle{display:none;position:fixed;bottom:72px;right:14px;z-index:900;background:linear-gradient(135deg,var(--p6),var(--p8));border:none;border-radius:50%;width:48px;height:48px;font-size:20px;color:#fff;cursor:pointer;box-shadow:0 4px 18px rgba(59,130,246,.5);align-items:center;justify-content:center;transition:.2s}
+.map-panel-toggle:hover{box-shadow:0 6px 24px rgba(59,130,246,.7);transform:scale(1.06)}
+
+/* ── Tablet (≤900px) ── */
+@media(max-width:900px){
+  html,body{overflow:hidden}
+  .navbar{padding:0 10px;gap:8px;height:50px;--nh:50px}
+  .nbrand{font-size:14px}
+  .ntabs{gap:1px}
+  .ntab{font-size:10px;padding:4px 9px}
+  .rbadge{display:none}
+  .btnfir{font-size:9px;padding:5px 10px}
+  .logoutbtn{font-size:9px;padding:4px 8px}
+  .sidepanel{width:300px}
+  .kpigrid{grid-template-columns:repeat(2,1fr)}
+  .chgrid{grid-template-columns:1fr}
+  .owgrid,.crgrid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+  #section-analytics,#section-officers,#section-criminals{padding:14px 16px;gap:14px}
+  .sec-hdr h2{font-size:20px}
+  .sinput{min-width:160px}
+  .detpanel{width:380px}
+}
+
+/* ── Mobile (≤640px) ── */
+@media(max-width:640px){
+  html,body{overflow:hidden}
+  :root{--nh:50px}
+
+  /* Navbar: hide desktop tabs, show only logo+right */
+  .navbar{padding:0 12px;gap:8px;justify-content:space-between}
+  .ntabs{display:none}
+  .nbrand{font-size:14px}
+  .nright{gap:6px}
+  .btnfir{font-size:9px;padding:5px 9px;border-radius:var(--r1)}
+  .logoutbtn{font-size:9px;padding:4px 8px}
+  .rbadge{font-size:8px;padding:2px 6px}
+
+  /* Show mobile bottom nav */
+  .mobile-nav{display:flex}
+  /* Show map panel toggle */
+  .map-panel-toggle{display:flex}
+
+  /* Shrink content area above bottom nav */
+  .scwrap{padding-bottom:60px}
+
+  /* MAP: full width, side panel as slide-up overlay */
+  #section-map{flex-direction:column!important;position:relative}
+  .maparea{width:100%;height:100%}
+  .sidepanel{
+    position:fixed;
+    bottom:60px;left:0;right:0;
+    width:100%!important;
+    height:72vh;
+    border-left:none;
+    border-top:1px solid var(--gbr);
+    border-radius:var(--r4) var(--r4) 0 0;
+    z-index:850;
+    transform:translateY(100%);
+    transition:transform .35s cubic-bezier(.25,.46,.45,.94);
+    box-shadow:0 -8px 40px rgba(0,0,0,.5)
+  }
+  .sidepanel.mobile-open{transform:translateY(0)}
+  /* Drag handle on panel */
+  .sidepanel::before{
+    content:'';
+    display:block;
+    width:40px;height:4px;
+    background:rgba(255,255,255,.2);
+    border-radius:2px;
+    margin:10px auto 4px;
+    flex-shrink:0
+  }
+
+  /* Login card */
+  .lcard{width:calc(100vw - 28px)!important;padding:22px 18px;gap:11px}
+  .lcard.wide{width:calc(100vw - 28px)!important}
+  .ltitle{font-size:22px}
+  .llogo{font-size:36px}
+  .role-cards{grid-template-columns:1fr!important}
+  .rcard{flex-direction:row;align-items:center;gap:12px;padding:11px 14px;text-align:left}
+  .rcard-icon{font-size:22px;margin-bottom:0;flex-shrink:0}
+  .rcard-perms{display:none}
+
+  /* Section layout */
+  #section-analytics,#section-officers,#section-criminals{padding:12px 12px;gap:12px;padding-bottom:72px}
+  .sec-hdr{flex-direction:column;align-items:flex-start;gap:8px}
+  .sec-hdr h2{font-size:20px}
+  .hactions{width:100%}
+  .sinput{min-width:0;width:100%}
+  .btnact{width:100%}
+
+  /* KPI grid */
+  .kpigrid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .knum{font-size:28px}
+
+  /* Charts single col */
+  .chgrid{grid-template-columns:1fr}
+  .chbox canvas{max-height:180px}
+
+  /* Officer/Criminal grids */
+  .owgrid,.crgrid{grid-template-columns:1fr}
+
+  /* Detail panels — full screen */
+  .detpanel{width:100vw!important;top:var(--nh);right:0;bottom:60px;border-left:none;border-top:1px solid var(--gbr)}
+
+  /* FIR/Criminal modals */
+  .fmodal{padding:18px 14px;border-radius:var(--r3)}
+  .fgrid{grid-template-columns:1fr!important}
+  .fg.full{grid-column:1}
+  .fmtitle{font-size:18px}
+  .factions{justify-content:stretch;flex-direction:column}
+  .fsubmit,.fcancel{width:100%;justify-content:center}
+  .cdmgrid{grid-template-columns:1fr!important}
+  .cdmfir{font-size:20px}
+
+  /* Sign-up extra fields */
+  #su-extra [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  .lhints{padding:9px 11px}
+
+  /* Station stats row */
+  .stn-stats{grid-template-columns:repeat(4,1fr)}
+  .ssv{font-size:15px}
+
+  /* Case card detail modal */
+  .cdm{padding:18px 14px;border-radius:var(--r3)}
+}
+
+/* ── Very small phones (≤380px) ── */
+@media(max-width:380px){
+  .kpigrid{grid-template-columns:1fr}
+  .knum{font-size:32px}
+  .ltab{font-size:10px;padding:6px}
+  .nbrand{display:none}
+  .mnav-btn{min-width:44px;font-size:8px}
+  .mnav-btn .mni{font-size:18px}
+}
+</style>
+</head>
+<body>
+
+<!-- DOME ENTRANCE -->
+<div id="dome-entrance" onclick="startIntroSequence()">
+  <div class="dome-wrapper">
+    <div class="dome-slice s1"></div>
+    <div class="dome-slice s2"></div>
+    <div class="dome-slice s3"></div>
+    <div class="dome-slice s4"></div>
+    <div class="dome-slice s5"></div>
+    <div class="dome-slice s6"></div>
+    <div class="dome-slice s7"></div>
+    <div class="dome-slice s8"></div>
+    <div class="dome-center">
+      <span class="dome-logo">CSN</span>
+      <div class="dome-text">SYSTEM ACCESS</div>
+    </div>
+  </div>
+</div>
+
+<!-- INTRO SEQUENCE -->
+<div id="intro-sequence">
+  <div class="intro-title" id="intro-title">CRIME SIGHT NOIR</div>
+  <div class="intro-subtitle" id="intro-subtitle">INITIALIZING SURVEILLANCE PROTOCOLS...</div>
+</div>
+
+<!-- LOGIN / SIGNUP -->
+<div id="login-screen">
+  <div class="lcard" id="lcard">
+    <div class="llogo">🔍</div>
+    <div class="ltitle">Crime Sight Noir</div>
+    <div class="lsub">Intelligence Platform v2</div>
+
+    <!-- Auth Tabs -->
+    <div class="ltabs" style="width:100%">
+      <button class="ltab active" id="tab-in" onclick="switchTab('in')">🔐 Sign In</button>
+      <button class="ltab" id="tab-up" onclick="switchTab('up')">✨ Sign Up</button>
+    </div>
+
+    <!-- SIGN IN FORM -->
+    <div class="lform" id="form-in">
+      <input id="lu" class="linput" placeholder="Username" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <input id="lp" class="linput" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="lbtn" onclick="doLogin()">🔐 Enter Platform</button>
+      <div class="lhints">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--txm);margin-bottom:3px">Demo Credentials</div>
+        <div class="lhr"><span class="lrole">Public</span><span class="lcred">public / public123</span></div>
+        <div class="lhr"><span class="lrole">Police Officer</span><span class="lcred">officer / police123</span></div>
+        <div class="lhr"><span class="lrole">Govt Official</span><span class="lcred">admin / govt2026</span></div>
+      </div>
+      <div class="lswitch">New to the platform? <span onclick="switchTab('up')">Create an account →</span></div>
+      <div id="lerr" class="lerr hidden">⚠ Invalid credentials</div>
+    </div>
+
+    <!-- SIGN UP FORM -->
+    <div class="lform hidden" id="form-up">
+
+      <!-- Role Selector -->
+      <div class="su-label">Select Your Access Level</div>
+      <div class="role-cards" id="role-cards">
+
+        <!-- Public -->
+        <div class="rcard sel" id="rc-public" onclick="selectRole('public')">
+          <div class="rcard-check">✓</div>
+          <div class="rcard-icon">🌐</div>
+          <div class="rcard-name">Public</div>
+          <div class="rcard-badge pub">Read Only</div>
+          <ul class="rcard-perms">
+            <li>View station map</li>
+            <li>Browse all FIRs</li>
+            <li>Analytics charts</li>
+            <li>Search criminals</li>
+            <li class="no">Add/edit cases</li>
+            <li class="no">Admin access</li>
+          </ul>
+        </div>
+
+        <!-- Police Officer -->
+        <div class="rcard" id="rc-police" onclick="selectRole('police')">
+          <div class="rcard-check">✓</div>
+          <div class="rcard-icon">👮</div>
+          <div class="rcard-name">Police Officer</div>
+          <div class="rcard-badge pol">Write Access</div>
+          <ul class="rcard-perms">
+            <li>View station map</li>
+            <li>Browse all FIRs</li>
+            <li>Register new FIR</li>
+            <li>Add criminals</li>
+            <li>Edit case status</li>
+            <li class="no">Admin access</li>
+          </ul>
+        </div>
+
+        <!-- Govt Official -->
+        <div class="rcard" id="rc-admin" onclick="selectRole('admin')">
+          <div class="rcard-check">✓</div>
+          <div class="rcard-icon">🏛️</div>
+          <div class="rcard-name">Govt Official</div>
+          <div class="rcard-badge gov">Full Admin</div>
+          <ul class="rcard-perms">
+            <li>View station map</li>
+            <li>Browse all FIRs</li>
+            <li>Register new FIR</li>
+            <li>Add criminals</li>
+            <li>Edit case status</li>
+            <li>Full admin access</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Dynamic Role-Specific Fields -->
+      <div id="su-extra" style="width:100%;display:none;flex-direction:column;gap:9px;animation:fu .3s ease both">
+        <!-- Police Officer fields -->
+        <div id="ex-police" style="display:none;flex-direction:column;gap:9px">
+          <div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:var(--r2);padding:10px 13px">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#93c5fd;font-weight:700;margin-bottom:8px">👮 Police Officer Details</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Badge / ID Number *</div>
+                <input id="ex-badge" class="linput" placeholder="e.g. ASN-9025" style="font-size:12px;padding:8px 11px"/></div>
+              <div><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Rank *</div>
+                <select id="ex-rank" class="linput" style="font-size:12px;padding:8px 11px">
+                  <option value="">Select Rank</option>
+                  <option>Constable</option><option>Head Constable</option>
+                  <option>Sub-Inspector</option><option>Inspector</option>
+                  <option>DSP</option><option>SP</option><option>DGP</option>
+                </select></div>
+              <div style="grid-column:1/-1"><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Assigned Station *</div>
+                <select id="ex-station" class="linput" style="font-size:12px;padding:8px 11px">
+                  <option value="">Select Station</option>
+                </select></div>
+              <div style="grid-column:1/-1"><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Squad</div>
+                <input id="ex-squad" class="linput" placeholder="e.g. Squad Bh-11" style="font-size:12px;padding:8px 11px"/></div>
+            </div>
+          </div>
+        </div>
+        <!-- Govt Official fields -->
+        <div id="ex-admin" style="display:none;flex-direction:column;gap:9px">
+          <div style="background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.2);border-radius:var(--r2);padding:10px 13px">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#fde047;font-weight:700;margin-bottom:8px">🏛️ Government Official Details</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Official ID / Badge *</div>
+                <input id="ex-offid" class="linput" placeholder="e.g. IPS-2024-042" style="font-size:12px;padding:8px 11px"/></div>
+              <div><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Designation *</div>
+                <select id="ex-desig" class="linput" style="font-size:12px;padding:8px 11px">
+                  <option value="">Select Designation</option>
+                  <option>IPS Officer</option><option>IAS Officer</option>
+                  <option>SP</option><option>DGP</option>
+                  <option>Commissioner</option><option>Inspector General</option>
+                  <option>Home Secretary</option>
+                </select></div>
+              <div><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Department *</div>
+                <select id="ex-dept" class="linput" style="font-size:12px;padding:8px 11px">
+                  <option value="">Select Department</option>
+                  <option>Home Ministry</option><option>State Police HQ</option>
+                  <option>CBI</option><option>Intelligence Bureau</option>
+                  <option>Anti-Corruption Bureau</option><option>Narcotics Control</option>
+                </select></div>
+              <div><div style="font-size:8px;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Zone / District</div>
+                <input id="ex-zone" class="linput" placeholder="e.g. Hyderabad Zone" style="font-size:12px;padding:8px 11px"/></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%">
+        <input id="su-name" class="linput" placeholder="Full Name" autocomplete="off"/>
+        <input id="su-user" class="linput" placeholder="Username" autocomplete="off"/>
+      </div>
+      <input id="su-pass" class="linput" type="password" placeholder="Password"/>
+      <input id="su-conf" class="linput" type="password" placeholder="Confirm Password" onkeydown="if(event.key==='Enter')doSignup()"/>
+      <button class="lbtn" onclick="doSignup()">✨ Create Account</button>
+      <div class="lswitch">Already registered? <span onclick="switchTab('in')">← Sign In</span></div>
+      <div id="suerr" class="lerr hidden"></div>
+      <div id="susucc" class="lsucc hidden"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function startIntroSequence() {
+  const dome = document.getElementById('dome-entrance');
+  dome.classList.add('open');
+  
+  // Wait 2.5 seconds for dome to partially open, then trigger intro
+  setTimeout(() => {
+    const intro = document.getElementById('intro-sequence');
+    intro.classList.add('active');
+    
+    // Animate intro text slightly after overlay appears
+    setTimeout(() => {
+      document.getElementById('intro-title').classList.add('show');
+      document.getElementById('intro-subtitle').classList.add('show');
+      
+      // End intro and show login after reading time
+      setTimeout(() => {
+        intro.classList.remove('active');
+        document.getElementById('login-screen').classList.add('visible');
+        setTimeout(() => {
+          dome.remove();
+          intro.remove();
+        }, 1000);
+      }, 3500); 
+    }, 500);
+  }, 2500);
+}
+</script>
+
+<!-- APP -->
+<div id="app" style="display:none;height:100%;flex-direction:column">
+  <nav class="navbar">
+    <div class="nlogo">🔍</div>
+    <span class="nbrand">Crime Sight Noir</span>
+    <div class="ntabs">
+      <button class="ntab active" id="dntab-map" onclick="showSec('map')">🗺️ Map</button>
+      <button class="ntab" id="dntab-analytics" onclick="showSec('analytics')">📈 Analytics</button>
+      <button class="ntab" id="dntab-officers" onclick="showSec('officers')">👮 Officers</button>
+      <button class="ntab" id="dntab-criminals" onclick="showSec('criminals')">🦹 Criminals</button>
+    </div>
+    <div class="nright">
+      <button class="btnfir hidden" id="btn-fir" onclick="openFIR()">➕ FIR</button>
+      <div class="rbadge" id="rbadge"></div>
+      <button class="logoutbtn" onclick="doLogout()">Exit</button>
+    </div>
+  </nav>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-nav" id="mobile-nav">
+    <button class="mnav-btn active" id="mntab-map" onclick="showSec('map')">
+      <span class="mni">🗺️</span>Map
+    </button>
+    <button class="mnav-btn" id="mntab-analytics" onclick="showSec('analytics')">
+      <span class="mni">📈</span>Analytics
+    </button>
+    <button class="mnav-btn" id="mntab-officers" onclick="showSec('officers')">
+      <span class="mni">👮</span>Officers
+    </button>
+    <button class="mnav-btn" id="mntab-criminals" onclick="showSec('criminals')">
+      <span class="mni">🦹</span>Criminals
+    </button>
+    <button class="mnav-btn" id="mntab-fir" style="display:none" onclick="openFIR()">
+      <span class="mni">➕</span>New FIR
+    </button>
+  </nav>
+
+  <!-- Map Panel Toggle (mobile) -->
+  <button class="map-panel-toggle" id="map-panel-toggle" onclick="toggleMobilePanel()" title="Toggle Station Panel">📋</button>
+  <div class="scwrap">
+
+    <!-- MAP -->
+    <div id="section-map" class="section" style="flex-direction:row">
+      <div class="maparea"><div id="main-map" style="width:100%;height:100%"></div></div>
+      <!-- Connection legend -->
+      <div class="conn-legend" id="conn-legend">
+        <div style="font-size:9px;font-weight:700;color:var(--p3);margin-bottom:5px;letter-spacing:.05em">CRIMINAL CONNECTIONS</div>
+        <div class="cl-row"><div class="cl-line c"></div><span>Shared Critical criminal</span></div>
+        <div class="cl-row"><div class="cl-line h"></div><span>Shared High criminal</span></div>
+        <div class="cl-row"><div class="cl-line m"></div><span>Shared Medium criminal</span></div>
+        <div style="margin-top:5px;color:var(--txm);font-size:8px">Line thickness = no. of shared criminals</div>
+      </div>
+      <aside class="sidepanel">
+        <div class="pd-default" id="pdd">
+          <div class="pd-icon">🗺️</div>
+          <h2 class="pd-title">Select a Station</h2>
+          <p class="pd-desc">Click any glowing marker to load FIR intelligence for that station.</p>
+          <div class="pd-hints">
+            <div class="hint-item"><span class="dot c"></span>Critical severity</div>
+            <div class="hint-item"><span class="dot h"></span>High severity</div>
+            <div class="hint-item"><span class="dot m"></span>Medium severity</div>
+          </div>
+        </div>
+        <div class="pd-content" id="pdc">
+          <div class="stn-hdr">
+            <button class="stn-back" onclick="closeStn()">← Back to Map</button>
+            <div class="stn-name" id="sn"></div>
+            <div class="stn-meta"><span id="sd"></span> <span id="ss" style="color:var(--p4)"></span></div>
+            <div class="stn-badges"><span class="psbadge" id="sps"></span><span class="psbadge" style="background:transparent;border-color:rgba(255,255,255,.1);color:var(--txm)" id="ssec"></span></div>
+          </div>
+          <div class="stn-stats">
+            <div class="ss"><span class="ssv" id="sst">0</span><span class="ssl">Total</span></div>
+            <div class="ss c1"><span class="ssv" id="sscr">0</span><span class="ssl">Critical</span></div>
+            <div class="ss c2"><span class="ssv" id="ssop">0</span><span class="ssl">Open</span></div>
+            <div class="ss c3"><span class="ssv" id="sscl">0</span><span class="ssl">Closed</span></div>
+          </div>
+          <!-- Criminal Intelligence Row -->
+          <div class="crim-row" id="scrim-row">
+            <div class="crim-row-title">🔴 Suspects at this Station <span id="scrim-cnt">0</span></div>
+            <div class="crim-chips" id="scrim-chips"></div>
+          </div>
+          <div class="filterrow">
+            <button class="fbtn active" onclick="applyF('all',this)">All</button>
+            <button class="fbtn" onclick="applyF('Critical',this)">Critical</button>
+            <button class="fbtn" onclick="applyF('High',this)">High</button>
+            <button class="fbtn" onclick="applyF('Medium',this)">Medium</button>
+            <button class="fbtn" onclick="applyF('Open',this)">Open</button>
+            <button class="fbtn" onclick="applyF('Closed',this)">Closed</button>
+          </div>
+          <div class="caselist" id="scl"></div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div id="section-analytics" class="section hidden">
+      <div class="sec-hdr"><div><h2>Intelligence Analytics</h2><p>Live statistics across all South India stations</p></div></div>
+      <div class="kpigrid">
+        <div class="kpi"><div class="knum" id="k1">0</div><div class="klbl">Total FIRs</div><div class="ksub" id="k1s"></div></div>
+        <div class="kpi kc"><div class="knum" id="k2">0</div><div class="klbl">Critical Cases</div><div class="ksub" id="k2s"></div></div>
+        <div class="kpi ko"><div class="knum" id="k3">0</div><div class="klbl">Open Cases</div><div class="ksub" id="k3s"></div></div>
+        <div class="kpi kg"><div class="knum" id="k4">0</div><div class="klbl">Closed Cases</div><div class="ksub" id="k4s"></div></div>
+      </div>
+      <div class="chgrid">
+        <div class="chbox"><h3>Cases by State</h3><canvas id="ch1"></canvas></div>
+        <div class="chbox"><h3>Crime Type Breakdown</h3><canvas id="ch2"></canvas></div>
+        <div class="chbox"><h3>Severity Distribution</h3><canvas id="ch3"></canvas></div>
+        <div class="chbox"><h3>Investigation Status</h3><canvas id="ch4"></canvas></div>
+      </div>
+    </div>
+
+    <!-- OFFICERS -->
+    <div id="section-officers" class="section hidden">
+      <div class="sec-hdr">
+        <div><h2>Officer Directory</h2><p>All assigned intelligence officers across South India</p></div>
+        <div class="hactions"><input class="sinput" placeholder="🔍 Search officers..." oninput="renderOfficers(this.value)"/></div>
+      </div>
+      <div class="owgrid" id="owgrid"></div>
+      <div id="op" class="detpanel" style="display:none">
+        <div class="dphdr">
+          <button class="dpback" onclick="closeOP()">← Back to Officers</button>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div class="dp-av o">👮</div>
+            <div><div class="dp-title" id="opn"></div><div class="dp-sub" id="opm"></div></div>
+          </div>
+        </div>
+        <div class="dpbody">
+          <div class="dpstats" id="opst"></div>
+          <div class="dpsectitle">FIR Cases Handled</div>
+          <div id="opc" style="display:flex;flex-direction:column;gap:7px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CRIMINALS -->
+    <div id="section-criminals" class="section hidden">
+      <div class="sec-hdr">
+        <div><h2>Criminal Database</h2><p>Search criminals · view history · trace station connections</p></div>
+        <div class="hactions">
+          <input class="sinput" id="crsi" placeholder="🔍 Search by name, ID, address..." oninput="renderCriminals(this.value)"/>
+          <button class="btnact hidden" id="btn-crim" onclick="openAddCrim()">➕ Add Criminal</button>
+        </div>
+      </div>
+      <div class="crgrid" id="crgrid"></div>
+      <div id="cp" class="detpanel" style="display:none">
+        <div class="dphdr">
+          <button class="dpback" onclick="closeCP()">← Back to Criminals</button>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div class="dp-av c">🦹</div>
+            <div><div class="dp-title" id="cpn"></div><div class="dp-sub" id="cpm"></div></div>
+          </div>
+        </div>
+        <div class="dpbody">
+          <div class="dpstats" id="cpst"></div>
+          <div class="mmwrap">
+            <div class="mmtitle" id="mm-title">🗺️ Stations with FIRs Against This Criminal</div>
+            <div id="crim-mini-map"></div>
+          </div>
+          <div class="dpsectitle">FIR History</div>
+          <div id="cpc" style="display:flex;flex-direction:column;gap:7px"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD FIR MODAL -->
+<div class="movl hidden" id="m-fir" onclick="closeFIR()">
+  <div class="fmodal" onclick="event.stopPropagation()">
+    <button class="fmclose" onclick="closeFIR()">✕</button>
+    <div class="fmtitle">➕ Register New FIR</div>
+    <div class="fgrid">
+      <div class="fg"><label class="flbl">FIR Number</label><input class="fctl" id="fn" readonly/></div>
+      <div class="fg"><label class="flbl">Filed Date</label><input type="date" class="fctl" id="fd"/></div>
+      <div class="fg"><label class="flbl">Station</label><select class="fctl" id="fst"></select></div>
+      <div class="fg"><label class="flbl">Crime Type</label><select class="fctl" id="fct"></select></div>
+      <div class="fg"><label class="flbl">Status</label><select class="fctl" id="fstat"><option>Open</option><option>Under Investigation</option><option>Closed</option></select></div>
+      <div class="fg"><label class="flbl">Handling</label><select class="fctl" id="fhn"><option>Active</option><option>Interrogation</option><option>Charge Sheet</option><option>Reassigned</option></select></div>
+      <div class="fg"><label class="flbl">Investigation Type</label><select class="fctl" id="fit"><option>Solo</option><option>Joint Open</option><option>Coordinate</option></select></div>
+      <div class="fg"><label class="flbl">Officer</label><select class="fctl" id="fof"></select></div>
+      <div class="fg"><label class="flbl">Criminal</label><select class="fctl" id="fcr"></select></div>
+      <div class="fg"><label class="flbl">Crime Count</label><input type="number" class="fctl" id="fcc" value="1" min="1" max="20"/></div>
+      <div class="fg full"><label class="flbl">Completion % <span id="fpv">0%</span></label><input type="range" class="fctl" id="fp" min="0" max="100" value="0" oninput="document.getElementById('fpv').textContent=this.value+'%'" style="padding:3px 0"/></div>
+      <div class="fg full"><label class="flbl">Remarks</label><textarea class="fctl" id="frm" rows="2" placeholder="Investigation notes..."></textarea></div>
+      <div class="factions"><button class="fcancel" onclick="closeFIR()">Cancel</button><button class="fsubmit" onclick="submitFIR()">Register FIR</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CRIMINAL MODAL -->
+<div class="movl hidden" id="m-crim" onclick="closeAddCrim()">
+  <div class="fmodal" onclick="event.stopPropagation()">
+    <button class="fmclose" onclick="closeAddCrim()">✕</button>
+    <div class="fmtitle">🦹 Add New Criminal</div>
+    <div class="fgrid">
+      <div class="fg"><label class="flbl">Criminal ID</label><input class="fctl" id="cid" readonly/></div>
+      <div class="fg"><label class="flbl">Photo ID</label><input class="fctl" id="cph" readonly/></div>
+      <div class="fg"><label class="flbl">Full Name *</label><input class="fctl" id="cnm" placeholder="e.g. Ravi Kumar"/></div>
+      <div class="fg"><label class="flbl">Age</label><input type="number" class="fctl" id="cage" min="10" max="90" value="25"/></div>
+      <div class="fg full"><label class="flbl">Address</label><input class="fctl" id="cadr" placeholder="e.g. 42, Sector 7"/></div>
+      <div class="fg full"><label class="flbl">Known Aliases</label><input class="fctl" id="cali" placeholder="e.g. 'Tiger', 'Raju'"/></div>
+      <div class="factions"><button class="fcancel" onclick="closeAddCrim()">Cancel</button><button class="fsubmit" onclick="submitCrim()">Add Criminal</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- CASE DETAIL MODAL -->
+<div class="cdmovl hidden" id="cdm" onclick="closeCDM()">
+  <div class="cdm" onclick="event.stopPropagation()">
+    <button class="cdmc" onclick="closeCDM()">✕</button>
+    <div class="cdmfir" id="cdmf"></div>
+    <div class="cdmbadges"><span class="sbadge" id="cdms"></span><span class="spill" id="cdmst"></span></div>
+    <div class="cdmgrid" id="cdmg"></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===== DATA ===== */
+const API_BASE = 'http://localhost:4000/api';
+let OL=[], CRL=[], CASES=[], ST=[], OM={}, CRM={};
+
+/* ===== STATIC STATION FALLBACK (always available, even offline) ===== */
+const STATIC_STATIONS = [
+  {id:1, ps:'PS-430', name:'Hyderabad Central PS',      district:'Hyderabad',          state:'Telangana',      lat:17.3850, lng:78.4867, sector:'Sector-TS1'},
+  {id:2, ps:'PS-424', name:'Secunderabad North PS',      district:'Secunderabad',       state:'Telangana',      lat:17.4399, lng:78.4983, sector:'Sector-TS2'},
+  {id:3, ps:'PS-316', name:'Warangal East PS',           district:'Warangal',           state:'Telangana',      lat:17.9689, lng:79.5941, sector:'Sector-TS3'},
+  {id:4, ps:'PS-176', name:'Nizamabad City PS',          district:'Nizamabad',          state:'Telangana',      lat:18.6726, lng:78.0940, sector:'Sector-TS4'},
+  {id:5, ps:'PS-127', name:'Karimnagar Central PS',      district:'Karimnagar',         state:'Telangana',      lat:18.4386, lng:79.1288, sector:'Sector-TS5'},
+  {id:6, ps:'PS-110', name:'Vijayawada City PS',         district:'Krishna',            state:'Andhra Pradesh', lat:16.5062, lng:80.6480, sector:'Sector-AP1'},
+  {id:7, ps:'PS-632', name:'Visakhapatnam Port PS',      district:'Visakhapatnam',      state:'Andhra Pradesh', lat:17.6868, lng:83.2185, sector:'Sector-AP2'},
+  {id:8, ps:'PS-479', name:'Guntur Town PS',             district:'Guntur',             state:'Andhra Pradesh', lat:16.3067, lng:80.4365, sector:'Sector-AP3'},
+  {id:9, ps:'PS-462', name:'Tirupati Hill PS',           district:'Chittoor',           state:'Andhra Pradesh', lat:13.6288, lng:79.4192, sector:'Sector-AP4'},
+  {id:10,ps:'PS-381', name:'Nellore Central PS',         district:'Nellore',            state:'Andhra Pradesh', lat:14.4426, lng:79.9865, sector:'Sector-AP5'},
+  {id:11,ps:'PS-790', name:'Thiruvananthapuram PS',      district:'Thiruvananthapuram', state:'Kerala',         lat:8.5241,  lng:76.9366, sector:'Sector-KL1'},
+  {id:12,ps:'PS-529', name:'Ernakulam Central PS',       district:'Ernakulam',          state:'Kerala',         lat:9.9312,  lng:76.2673, sector:'Sector-KL2'},
+  {id:13,ps:'PS-457', name:'Kozhikode Beach PS',         district:'Kozhikode',          state:'Kerala',         lat:11.2588, lng:75.7804, sector:'Sector-KL3'},
+  {id:14,ps:'PS-645', name:'Thrissur Town PS',           district:'Thrissur',           state:'Kerala',         lat:10.5276, lng:76.2144, sector:'Sector-KL4'},
+  {id:15,ps:'PS-845', name:'Kollam Port PS',             district:'Kollam',             state:'Kerala',         lat:8.8932,  lng:76.6141, sector:'Sector-KL5'},
+  {id:16,ps:'PS-961', name:'Chennai Central PS',         district:'Chennai',            state:'Tamil Nadu',     lat:13.0827, lng:80.2707, sector:'Sector-TN1'},
+  {id:17,ps:'PS-133', name:'Coimbatore City PS',         district:'Coimbatore',         state:'Tamil Nadu',     lat:11.0168, lng:76.9558, sector:'Sector-TN2'},
+  {id:18,ps:'PS-327', name:'Madurai Central PS',         district:'Madurai',            state:'Tamil Nadu',     lat:9.9252,  lng:78.1198, sector:'Sector-TN3'},
+  {id:19,ps:'PS-554', name:'Salem North PS',             district:'Salem',              state:'Tamil Nadu',     lat:11.6643, lng:78.1460, sector:'Sector-TN4'},
+  {id:20,ps:'PS-370', name:'Tiruchirappalli Fort PS',    district:'Tiruchirappalli',    state:'Tamil Nadu',     lat:10.7905, lng:78.7047, sector:'Sector-TN5'},
+  {id:21,ps:'PS-846', name:'Puducherry Central PS',      district:'Puducherry',         state:'Puducherry',     lat:11.9416, lng:79.8083, sector:'Sector-PY1'},
+  {id:22,ps:'PS-252', name:'Kurnool City PS',            district:'Kurnool',            state:'Andhra Pradesh', lat:15.8281, lng:78.0373, sector:'Sector-AP6'},
+  {id:23,ps:'PS-217', name:'Khammam East PS',            district:'Khammam',            state:'Telangana',      lat:17.2473, lng:80.1514, sector:'Sector-TS6'},
+  {id:24,ps:'PS-720', name:'Malappuram PS',              district:'Malappuram',         state:'Kerala',         lat:11.0510, lng:76.0711, sector:'Sector-KL6'},
+  {id:25,ps:'PS-421', name:'Nagercoil PS',               district:'Kanyakumari',        state:'Tamil Nadu',     lat:8.1833,  lng:77.4119, sector:'Sector-TN6'},
+];
+/* Pre-populate ST immediately so the map always has stations */
+ST = STATIC_STATIONS.slice();
+
+function sv(t){const u=t.toUpperCase();if(/HOMICIDE|KIDNAP|SEXUAL|ARSON|HUMAN TRAF/.test(u))return'Critical';if(/ROBBERY|ASSAULT|FIREARM|EXTORT|DRUG|COUNTER|IDENTITY/.test(u))return'High';return'Medium';}
+
+// Pre-load stations for the signup form (before login)
+async function fetchStationsForSignup(){
+  if(ST.length>0) return; // already loaded
+  try{
+    const res=await fetch(`${API_BASE}/stations`);
+    if(!res.ok) return;
+    const raw=await res.json();
+    ST=raw.map(s=>({id:s.id,ps:s.ps_code,name:s.name,district:s.district,state:s.state,lat:s.lat,lng:s.lng,sector:s.sector}));
+    // Populate station dropdown if police role is already selected
+    const sel=document.getElementById('ex-station');
+    if(sel && sel.options.length<=1){
+      ST.forEach(s=>{const o=document.createElement('option');o.value=s.ps;o.textContent=`${s.ps} — ${s.name} (${s.district})`;sel.appendChild(o);});
+    }
+  } catch(e){ console.warn('Could not pre-load stations:', e); }
+}
+
+async function fetchInitialData() {
+  try {
+    const [stRes, offRes, crimRes, casesRes] = await Promise.all([
+      fetch(`${API_BASE}/stations`), fetch(`${API_BASE}/officers`), fetch(`${API_BASE}/criminals`), fetch(`${API_BASE}/cases`)
+    ]);
+    const rawST = await stRes.json();
+    OL = await offRes.json();
+    CRL = await crimRes.json();
+    const rawCases = await casesRes.json();
+
+    ST = rawST.map(s => ({id: s.id, ps: s.ps_code, name: s.name, district: s.district, state: s.state, lat: s.lat, lng: s.lng, sector: s.sector}));
+    CRL = CRL.map(c => ({id: c.id, name: c.name, age: c.age, address: c.address, photo: c.photo_id, alias: c.alias}));
+    CRM = {}; CRL.forEach(c => CRM[c.id] = c);
+    OM = {}; OL.forEach(o => OM[o.id] = o);
+    
+    CASES = rawCases.map(c => {
+      const o = OM[c.officer_id] || {name:'Unknown', squad:'—', rank:'—'};
+      const cr = CRM[c.criminal_id] || {name:'Unknown', age:0, address:'—', photo:'—'};
+      return {
+        fn: c.fir_number, ps: c.ps_code, sid: c.station_id, asi: c.assign_id, cc: c.case_code,
+        pct: c.completion_pct, hn: c.handling, it: c.investigation_type, ci: c.criminal_id, oi: c.officer_id,
+        ct: c.crime_type, cnt: c.crime_count, st: c.status, dt: c.arrest_date, rem: c.remarks,
+        severity: c.severity, on: o.name, os: o.squad, or: o.rank, cn: cr.name, ca: cr.age, cad: cr.address, cp: cr.photo,
+        sn: c.station_name, di: c.district, sta: c.state
+      };
+    });
+    // Refresh map markers with live severity colors now that cases are loaded
+    refreshMarkers();
+  } catch(e) { console.error('Failed to load initial data', e); }
+}
+
+/* ===== AUTH ===== */
+let CU=null;
+let selRole='public';
+
+function switchTab(t){
+  const card=document.getElementById('lcard');
+  document.getElementById('form-in').classList.toggle('hidden',t!=='in');
+  document.getElementById('form-up').classList.toggle('hidden',t!=='up');
+  document.getElementById('tab-in').classList.toggle('active',t==='in');
+  document.getElementById('tab-up').classList.toggle('active',t==='up');
+  card.classList.toggle('wide',t==='up');
+  // Pre-fetch stations when signup tab opens so dropdown is ready
+  if(t==='up') fetchStationsForSignup();
+}
+
+function selectRole(r){
+  selRole=r;
+  ['public','police','admin'].forEach(id=>{
+    document.getElementById('rc-'+id).classList.toggle('sel',id===r);
+  });
+  const ex=document.getElementById('su-extra');
+  const ep=document.getElementById('ex-police');
+  const ea=document.getElementById('ex-admin');
+  if(r==='public'){
+    ex.style.display='none';
+    ep.style.display='none'; ea.style.display='none';
+  } else if(r==='police'){
+    ex.style.display='flex';
+    ep.style.display='flex'; ea.style.display='none';
+    // Populate station dropdown
+    const sel=document.getElementById('ex-station');
+    if(sel.options.length<=1 && ST.length>0){
+      ST.forEach(s=>{const o=document.createElement('option');o.value=s.ps;o.textContent=`${s.ps} — ${s.name} (${s.district})`;sel.appendChild(o);});
+    } else if(ST.length===0){
+      // Stations not yet loaded — fetch them now
+      fetchStationsForSignup();
+    }
+  } else if(r==='admin'){
+    ex.style.display='flex';
+    ep.style.display='none'; ea.style.display='flex';
+  }
+}
+
+async function doLogin(){
+  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    if (!res.ok) throw new Error('Invalid credentials');
+    CU = await res.json();
+    localStorage.setItem('csn', JSON.stringify(CU));
+    document.getElementById('lerr').classList.add('hidden');
+    await fetchInitialData();
+    startApp();
+  } catch(e) {
+    const lerr = document.getElementById('lerr');
+    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+      lerr.innerHTML = '⚠ Backend is offline. Please start the Python backend on port 4000.';
+    } else {
+      lerr.innerHTML = '⚠ ' + e.message;
+    }
+    lerr.classList.remove('hidden');
+    document.getElementById('lp').value='';
+  }
+}
+
+async function doSignup(){
+  const name=document.getElementById('su-name').value.trim();
+  const user=document.getElementById('su-user').value.trim();
+  const pass=document.getElementById('su-pass').value;
+  const conf=document.getElementById('su-conf').value;
+  const errEl=document.getElementById('suerr'),succEl=document.getElementById('susucc');
+  errEl.classList.add('hidden');succEl.classList.add('hidden');
+
+  if(!name||!user||!pass){errEl.textContent='⚠ All fields are required.';errEl.classList.remove('hidden');return;}
+  if(pass.length<6){errEl.textContent='⚠ Password must be at least 6 characters.';errEl.classList.remove('hidden');return;}
+  if(pass!==conf){errEl.textContent='⚠ Passwords do not match.';errEl.classList.remove('hidden');return;}
+
+  const payload = { name, username: user, password: pass, role: selRole };
+  if(selRole==='police'){
+    const badge=document.getElementById('ex-badge').value.trim();
+    const rank=document.getElementById('ex-rank').value;
+    const station=document.getElementById('ex-station').value;
+    const squad=document.getElementById('ex-squad').value.trim();
+    if(!badge||!rank||!station){errEl.textContent='⚠ Badge number, rank, and station required.';errEl.classList.remove('hidden');return;}
+    const stn=ST.find(s=>s.ps===station);
+    payload.stationCode=station;
+    payload.badge=badge;
+    payload.rank=rank;
+    payload.stationName=stn?stn.name:'';
+    payload.district=stn?stn.district:'';
+    payload.state=stn?stn.state:'';
+    payload.squad=squad||'—';
+  } else if(selRole==='admin'){
+    const offid=document.getElementById('ex-offid').value.trim();
+    const desig=document.getElementById('ex-desig').value;
+    const dept=document.getElementById('ex-dept').value;
+    const zone=document.getElementById('ex-zone').value.trim();
+    if(!offid||!desig||!dept){errEl.textContent='⚠ Official ID, designation, and department required.';errEl.classList.remove('hidden');return;}
+    payload.officialId=offid;
+    payload.designation=desig;
+    payload.department=dept;
+    payload.zone=zone||'—';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/signup`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Signup failed');
+    }
+    CU = await res.json();
+    succEl.textContent=`✅ Account created! Welcome, ${name}. Signing you in...`;
+    succEl.classList.remove('hidden');
+    setTimeout(async ()=>{
+      localStorage.setItem('csn', JSON.stringify(CU));
+      await fetchInitialData();
+      startApp();
+    }, 1200);
+  } catch(e) {
+    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+      errEl.textContent = '⚠ Backend is offline. Please start the Python backend on port 4000.';
+    } else {
+      errEl.textContent = '⚠ ' + e.message;
+    }
+    errEl.classList.remove('hidden');
+  }
+}
+
+function doLogout(){localStorage.removeItem('csn');location.reload();}
+function can(a){return({public:['view'],police:['view','add','edit'],admin:['view','add','edit','delete']}[CU?.role]||[]).includes(a);}
+function startApp(){
+  document.getElementById('login-screen').style.display='none';
+  const app=document.getElementById('app');app.style.display='flex';
+  const rb=document.getElementById('rbadge');
+  // Build rich display label for navbar badge
+  let label=CU.display;
+  if(CU.role==='police'&&CU.badge) label=`${CU.fullName||CU.username} · ${CU.rank||''} · ${CU.station||''}`;
+  if(CU.role==='admin'&&CU.designation) label=`${CU.fullName||CU.username} · ${CU.designation}`;  
+  rb.textContent=label;rb.className='rbadge '+CU.role;
+  let tooltipText='';
+  if(CU.role==='police'){
+    tooltipText=`Badge: ${CU.badge||'—'} | Rank: ${CU.rank||'—'} | Station: ${CU.stationName||CU.stationCode||'—'} | Squad: ${CU.squad||'—'}`;
+    if(CU.badge) label=`${CU.display} · ${CU.rank||''} · ${CU.badge}`;
+  } else if(CU.role==='admin'){
+    tooltipText=`ID: ${CU.officialId||'—'} | ${CU.designation||'—'} | ${CU.department||'—'} | Zone: ${CU.zone||'—'}`;
+    if(CU.designation) label=`${CU.display} · ${CU.designation}`;
+  }
+  rb.textContent=label;
+  rb.title=tooltipText;
+  if(can('add')){
+    document.getElementById('btn-fir').classList.remove('hidden');
+    document.getElementById('btn-crim').classList.remove('hidden');
+    const mfir=document.getElementById('mntab-fir');if(mfir)mfir.style.display='flex';
+  }
+  showSec('map');
+}
+
+/* ===== NAVIGATION ===== */
+let activeSec='map',mainMap=null,crimMap=null,charts={};
+const SECTABS=['map','analytics','officers','criminals'];
+function showSec(n){
+  document.querySelectorAll('.section').forEach(s=>s.classList.add('hidden'));
+  document.getElementById('section-'+n).classList.remove('hidden');
+  // Sync desktop tabs
+  document.querySelectorAll('.ntab').forEach((t,i)=>t.classList.toggle('active',SECTABS[i]===n));
+  // Sync mobile bottom nav tabs
+  SECTABS.forEach(id=>{
+    const mb=document.getElementById('mntab-'+id);
+    if(mb)mb.classList.toggle('active',id===n);
+  });
+  // Show/hide map panel toggle only on map section
+  const mpt=document.getElementById('map-panel-toggle');
+  if(mpt)mpt.style.display=(n==='map')?'':'none';
+  activeSec=n;
+  if(n==='map')setTimeout(()=>{if(!mainMap)initMap();else mainMap.invalidateSize();},60);
+  if(n==='analytics')setTimeout(initAnalytics,60);
+  if(n==='officers')renderOfficers();
+  if(n==='criminals')renderCriminals();
+}
+
+/* ===== MOBILE PANEL TOGGLE ===== */
+function toggleMobilePanel(){
+  const sp=document.querySelector('.sidepanel');
+  if(!sp)return;
+  sp.classList.toggle('mobile-open');
+  const btn=document.getElementById('map-panel-toggle');
+  if(btn)btn.textContent=sp.classList.contains('mobile-open')?'✕':'📋';
+}
+function openMobilePanel(){
+  const sp=document.querySelector('.sidepanel');
+  if(sp&&window.innerWidth<=640){
+    sp.classList.add('mobile-open');
+    const btn=document.getElementById('map-panel-toggle');
+    if(btn)btn.textContent='✕';
+  }
+}
+
+/* ===== MAP ===== */
+let stnCases=[],selStn=null,stationMarkers=[];
+function placeMarkers(){
+  // Remove old markers
+  stationMarkers.forEach(m=>{if(mainMap)mainMap.removeLayer(m);});
+  stationMarkers=[];
+  ST.forEach(s=>{
+    const sc=CASES.filter(c=>c.sid===s.id);
+    const cl=sc.some(c=>c.severity==='Critical')?'critical':sc.some(c=>c.severity==='High')?'high':'';
+    const m=L.marker([s.lat,s.lng],{icon:mkIcon(cl)}).addTo(mainMap);
+    m.bindTooltip(`<strong>${s.ps}</strong> — ${s.name}`,{className:'stt',direction:'top'});
+    m.on('click',()=>openStn(s));
+    stationMarkers.push(m);
+  });
+}
+function initMap(){
+  if(mainMap){mainMap.invalidateSize();return;}
+  mainMap=L.map('main-map',{zoomControl:false,attributionControl:false}).setView([14.5,79.5],6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(mainMap);
+  L.control.zoom({position:'bottomright'}).addTo(mainMap);
+  placeMarkers();
+}
+function refreshMarkers(){if(mainMap)placeMarkers();}
+function mkIcon(cl){return L.divIcon({className:'',html:`<div class="pulse-marker ${cl}"><div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-dot"></div></div>`,iconSize:[34,34],iconAnchor:[17,17],tooltipAnchor:[11,-6]});}
+function openStn(s){
+  selStn=s;
+  document.getElementById('pdd').classList.add('hidden');
+  // Auto-open panel on mobile
+  openMobilePanel();
+  const pc=document.getElementById('pdc');pc.classList.add('show');
+  g('sn',s.name);g('sd',s.district);g('ss','· '+s.state);g('sps',s.ps);g('ssec',s.sector);
+  stnCases=CASES.filter(c=>c.sid===s.id);
+  g('sst',stnCases.length);g('sscr',stnCases.filter(c=>c.severity==='Critical').length);
+  g('ssop',stnCases.filter(c=>c.st==='Open').length);g('sscl',stnCases.filter(c=>c.st==='Closed').length);
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.fbtn').classList.add('active');
+
+  // --- Criminal Intelligence: suspects linked to this station ---
+  const crimIds=[...new Set(stnCases.map(c=>c.ci).filter(Boolean))];
+  g('scrim-cnt',crimIds.length);
+  const chips=document.getElementById('scrim-chips');chips.innerHTML='';
+  crimIds.forEach(cid=>{
+    const cr=CRM[cid];if(!cr)return;
+    const cCount=stnCases.filter(c=>c.ci===cid).length;
+    const chip=document.createElement('div');chip.className='cchip';
+    chip.innerHTML=`<span class="cchip-av">🦹</span><span class="cchip-name">${cr.name}</span><span class="cchip-cnt">×${cCount}</span>`;
+    chip.title=`${cr.id} | Age ${cr.age} | ${cr.address}`;
+    chip.onclick=()=>{showSec('criminals');setTimeout(()=>openCP(cid),100);};
+    chips.appendChild(chip);
+  });
+
+  renderCases(stnCases);mainMap.flyTo([s.lat,s.lng],10,{duration:1.2});
+  // --- Draw connecting lines to stations sharing criminals ---
+  setTimeout(()=>drawConnLines(s,crimIds),1300);
+}
+function closeStn(){
+  document.getElementById('pdc').classList.remove('show');
+  document.getElementById('pdd').classList.remove('hidden');
+  selStn=null;mainMap.flyTo([14.5,79.5],6,{duration:1.2});
+  clearConnLines();
+}
+
+let connLines=[];
+function clearConnLines(){
+  connLines.forEach(l=>{if(mainMap)mainMap.removeLayer(l);});
+  connLines=[];
+  document.getElementById('conn-legend').classList.remove('show');
+}
+
+/* Generate N points along a quadratic Bezier parabola between two lat/lng points */
+function arcPoints(lat1,lng1,lat2,lng2,n){
+  n=n||60;
+  var midLat=(lat1+lat2)/2, midLng=(lng1+lng2)/2;
+  var dLat=lat2-lat1, dLng=lng2-lng1;
+  var dist=Math.sqrt(dLat*dLat+dLng*dLng);
+  var offset=Math.max(dist*0.42, 0.8);
+  var perpLat=(-dLng/dist)*offset;
+  var perpLng=(dLat/dist)*offset;
+  var cLat=midLat+perpLat, cLng=midLng+perpLng;
+  var pts=[];
+  for(var i=0;i<=n;i++){
+    var t=i/n;
+    var lt=(1-t)*(1-t)*lat1+2*(1-t)*t*cLat+t*t*lat2;
+    var lg=(1-t)*(1-t)*lng1+2*(1-t)*t*cLng+t*t*lng2;
+    pts.push([lt,lg]);
+  }
+  return pts;
+}
+
+function drawConnLines(srcStn, srcCrimIds){
+  clearConnLines();
+  if(!srcCrimIds.length)return;
+  let hasLines=false;
+  ST.forEach(tgt=>{
+    if(tgt.id===srcStn.id)return;
+    const tgtCases=CASES.filter(c=>c.sid===tgt.id);
+    const tgtCrimIds=new Set(tgtCases.map(c=>c.ci).filter(Boolean));
+    const shared=srcCrimIds.filter(cid=>tgtCrimIds.has(cid));
+    if(!shared.length)return;
+    hasLines=true;
+    // Colour by highest severity among shared criminal cases
+    let color='#7c3aed';
+    shared.forEach(cid=>{
+      const hasCrit=CASES.some(c=>c.ci===cid&&(c.sid===srcStn.id||c.sid===tgt.id)&&c.severity==='Critical');
+      const hasHigh=CASES.some(c=>c.ci===cid&&(c.sid===srcStn.id||c.sid===tgt.id)&&c.severity==='High');
+      if(hasCrit)color='#ef4444';
+      else if(hasHigh&&color!=='#ef4444')color='#f97316';
+    });
+    const weight=Math.min(1.5+shared.length*1.0, 5);
+    // Dot spacing: tighter dots for critical, looser for medium
+    const dashArr=color==='#ef4444'?'3,7':color==='#f97316'?'3,9':'3,12';
+    // Parabola arc points
+    const pts=arcPoints(srcStn.lat,srcStn.lng,tgt.lat,tgt.lng);
+    const sharedNames=shared.map(cid=>CRM[cid]?CRM[cid].name:cid).join(', ');
+    const line=L.polyline(pts,{
+      color, weight, opacity:0.8,
+      dashArray:dashArr, lineCap:'round', lineJoin:'round',
+    }).addTo(mainMap);
+    line.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:11px;min-width:170px">
+      <div style="font-weight:700;color:#c4b5fd;margin-bottom:4px">${shared.length} Shared Criminal${shared.length>1?'s':''}</div>
+      <div style="color:#fca5a5;font-size:10px;margin-bottom:5px">${sharedNames}</div>
+      <div style="color:#a89fc4;font-size:9px">${srcStn.name} ↔ ${tgt.name}</div>
+    </div>`,{className:'crim-popup',maxWidth:210});
+    connLines.push(line);
+  });
+  if(hasLines)document.getElementById('conn-legend').classList.add('show');
+}
+
+function applyF(f,btn){document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderCases(f==='all'?stnCases:stnCases.filter(c=>c.severity===f||c.st===f));}
+function spill(s){return s==='Open'?'Open':s==='Closed'?'Closed':'Under';}
+function renderCases(list){
+  const el=document.getElementById('scl');el.innerHTML='';
+  if(!list.length){el.innerHTML='<div class="empty-st"><span class="ei">🔎</span><span>No cases match this filter.</span></div>';return;}
+  list.forEach((c,i)=>{
+    const d=document.createElement('div');d.className=`ccard ${c.severity.toLowerCase()}`;d.style.animationDelay=`${i*.04}s`;
+    d.innerHTML=`<div class="cctop"><span class="ccfir">${c.fn}</span><div class="ccbadges"><span class="sbadge ${c.severity}">${c.severity}</span><span class="spill ${spill(c.st)}">${c.st}</span></div></div><div class="ccinfo"><div class="cci"><span class="ccl">Crime</span><span class="ccv">${c.ct}</span></div><div class="cci"><span class="ccl">Officer</span><span class="ccv">${c.on}</span></div><div class="cci"><span class="ccl">Assignment</span><span class="ccv">${c.asi}</span></div><div class="cci"><span class="ccl">Investigation</span><span class="ccv">${c.it}</span></div></div><div class="pbar"><div class="pfill" style="width:${c.pct}%"></div></div>`;
+    d.onclick=()=>openCDM(c);el.appendChild(d);
+  });
+}
+function openCDM(c){
+  g('cdmf',c.fn);const se=document.getElementById('cdms');se.textContent=c.severity;se.className=`sbadge ${c.severity}`;
+  const ss=document.getElementById('cdmst');ss.textContent=c.st;ss.className=`spill ${spill(c.st)}`;
+  document.getElementById('cdmg').innerHTML=`<div class="cdmf"><div class="cdmfl">Station</div><div class="cdmfv">${c.sn}</div></div><div class="cdmf"><div class="cdmfl">PS Code</div><div class="cdmfv">${c.ps}</div></div><div class="cdmf"><div class="cdmfl">Case Code</div><div class="cdmfv">${c.cc}</div></div><div class="cdmf"><div class="cdmfl">Crime Type</div><div class="cdmfv">${c.ct} ×${c.cnt}</div></div><div class="cdmf"><div class="cdmfl">Completion</div><div class="cdmfv">${c.pct}%</div></div><div class="cdmf"><div class="cdmfl">Handling</div><div class="cdmfv">${c.hn}</div></div><div class="cdmf"><div class="cdmfl">Investigation</div><div class="cdmfv">${c.it}</div></div><div class="cdmf"><div class="cdmfl">Criminal ID</div><div class="cdmfv">${c.ci}</div></div><div class="cdmf"><div class="cdmfl">Criminal</div><div class="cdmfv">${c.cn}, Age ${c.ca}</div></div><div class="cdmf full"><div class="cdmfl">Address</div><div class="cdmfv">${c.cad}</div></div><div class="cdmf"><div class="cdmfl">Officer</div><div class="cdmfv">${c.on} · ${c.or}</div></div><div class="cdmf"><div class="cdmfl">Squad</div><div class="cdmfv">${c.os}</div></div><div class="cdmf"><div class="cdmfl">Date</div><div class="cdmfv">${c.dt}</div></div><div class="cdmf"><div class="cdmfl">District · State</div><div class="cdmfv">${c.di} · ${c.sta}</div></div><div class="cdmf full"><div class="cdmfl">Remarks</div><div class="cdmfv">${c.rem}</div></div>`;
+  document.getElementById('cdm').classList.remove('hidden');
+}
+function closeCDM(){document.getElementById('cdm').classList.add('hidden');}
+
+/* ===== ANALYTICS ===== */
+const PAL=['#7c3aed','#8b5cf6','#a78bfa','#60a5fa','#34d399','#fbbf24','#f87171','#fb923c','#e879f9','#c4b5fd'];
+const CDO={responsive:true,plugins:{legend:{labels:{color:'#a89fc4',font:{size:11},boxWidth:12}}}};
+function initAnalytics(){
+  if(charts.done)return;
+  const tot=CASES.length,crit=CASES.filter(c=>c.severity==='Critical').length,opn=CASES.filter(c=>c.st==='Open').length,cls=CASES.filter(c=>c.st==='Closed').length;
+  g('k1',tot);g('k1s',`Across ${ST.length} stations`);g('k2',crit);g('k2s',`${Math.round(crit/tot*100)}% of all cases`);g('k3',opn);g('k3s','Active investigations');g('k4',cls);g('k4s',`${Math.round(cls/tot*100)}% closure rate`);
+  const states={};CASES.forEach(c=>{states[c.sta]=(states[c.sta]||0)+1;});
+  new Chart(document.getElementById('ch1'),{type:'doughnut',data:{labels:Object.keys(states),datasets:[{data:Object.values(states),backgroundColor:PAL,borderColor:'#18181f',borderWidth:2}]},options:{...CDO,cutout:'65%'}});
+  const crm={};CASES.forEach(c=>{const k=c.ct.split(' ')[0];crm[k]=(crm[k]||0)+1;});
+  const srt=Object.entries(crm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  new Chart(document.getElementById('ch2'),{type:'bar',data:{labels:srt.map(e=>e[0]),datasets:[{data:srt.map(e=>e[1]),backgroundColor:PAL,borderRadius:4}]},options:{...CDO,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6b6488',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6b6488'},grid:{color:'rgba(255,255,255,.06)'}}}}});
+  new Chart(document.getElementById('ch3'),{type:'doughnut',data:{labels:['Critical','High','Medium'],datasets:[{data:['Critical','High','Medium'].map(s=>CASES.filter(c=>c.severity===s).length),backgroundColor:['#ef4444','#f97316','#eab308'],borderColor:'#18181f',borderWidth:2}]},options:{...CDO,cutout:'60%'}});
+  new Chart(document.getElementById('ch4'),{type:'pie',data:{labels:['Open','Closed','Under Inv.'],datasets:[{data:['Open','Closed','Under Investigation'].map(s=>CASES.filter(c=>c.st===s).length),backgroundColor:['#60a5fa','#22c55e','#eab308'],borderColor:'#18181f',borderWidth:2}]},options:CDO});
+  charts.done=true;
+}
+
+/* ===== OFFICERS ===== */
+function renderOfficers(q=''){
+  const g2=document.getElementById('owgrid');g2.innerHTML='';
+  OL.filter(o=>!q||o.name.toLowerCase().includes(q.toLowerCase())||o.id.includes(q)).forEach(o=>{
+    const cs=CASES.filter(c=>c.oi===o.id),cr=cs.filter(c=>c.severity==='Critical').length,op=cs.filter(c=>c.st==='Open').length;
+    const d=document.createElement('div');d.className='owcard';
+    d.innerHTML=`<div class="ctop"><div class="cavatar oav">👮</div><div style="text-align:right"><div class="ccount">${cs.length}</div><div class="ccountlbl">Cases</div></div></div><div class="cname">${o.name}</div><div class="csub">${o.rank} · ${o.squad}</div><div style="font-size:9px;color:var(--txm);margin-top:4px">${o.id}</div><div class="ctags">${cr?`<span class="ctag tred">⚠ ${cr} Critical</span>`:''}<span class="ctag tblu">${op} Open</span><span class="ctag tgrn">${cs.length-op} Resolved</span></div>`;
+    d.onclick=()=>openOP(o.id);g2.appendChild(d);
+  });
+}
+function openOP(id){
+  const o=OM[id],cs=CASES.filter(c=>c.oi===id),cr=cs.filter(c=>c.severity==='Critical').length,op=cs.filter(c=>c.st==='Open').length,cl=cs.filter(c=>c.st==='Closed').length;
+  g('opn',o.name);g('opm',`${o.rank} · ${o.squad} · ${o.id}`);
+  document.getElementById('opst').innerHTML=`<div class="dps"><div class="dpsv">${cs.length}</div><div class="dpsl">Total</div></div><div class="dps"><div class="dpsv r">${cr}</div><div class="dpsl">Critical</div></div><div class="dps"><div class="dpsv b">${op}</div><div class="dpsl">Open</div></div><div class="dps"><div class="dpsv g">${cl}</div><div class="dpsl">Closed</div></div>`;
+  const cl2=document.getElementById('opc');cl2.innerHTML='';
+  cs.forEach(c=>{const d=document.createElement('div');d.className=`mcc ${c.severity==='Critical'?'cr':c.severity==='High'?'hi':'me'}`;d.innerHTML=`<div class="mcctop"><span class="mccfir">${c.fn}</span><span class="sbadge ${c.severity}">${c.severity}</span></div><div class="mccmeta">${c.ct} · ${c.sn} · <span style="color:var(--p4)">${c.st}</span></div>`;cl2.appendChild(d);});
+  if(!cs.length)cl2.innerHTML='<div class="empty-st"><span class="ei">📋</span><span>No cases found.</span></div>';
+  document.getElementById('op').style.display='flex';
+}
+function closeOP(){document.getElementById('op').style.display='none';}
+
+/* ===== CRIMINALS ===== */
+function renderCriminals(q=''){
+  const g2=document.getElementById('crgrid');g2.innerHTML='';
+  CRL.filter(cr=>!q||cr.name.toLowerCase().includes(q.toLowerCase())||cr.id.includes(q)||cr.address.toLowerCase().includes(q.toLowerCase())).forEach(cr=>{
+    const cs=CASES.filter(c=>c.ci===cr.id),svs=cs.map(c=>c.severity);
+    const ts=svs.includes('Critical')?'Critical':svs.includes('High')?'High':'Medium';
+    const d=document.createElement('div');d.className='crcard';
+    d.innerHTML=`<div class="ctop"><div class="cavatar crav">🦹</div><div style="text-align:right"><div class="ccount">${cs.length}</div><div class="ccountlbl">FIRs</div></div></div><div class="cname">${cr.name}</div><div class="csub">Age ${cr.age} · ${cr.address}</div><div style="font-size:9px;color:var(--txm);margin-top:4px">${cr.id} · ${cr.photo}</div><div class="ctags"><span class="ctag ${ts==='Critical'?'tred':ts==='High'?'tora':'tyel'}">${ts}</span><span class="ctag tpur">${[...new Set(cs.map(c=>c.sid))].length} Stations</span></div>`;
+    d.onclick=()=>openCP(cr.id);g2.appendChild(d);
+  });
+}
+function openCP(id){
+  const cr=CRM[id];
+  // Only FIRs where THIS criminal is the registered criminal
+  const cs=CASES.filter(c=>c.ci===id);
+  // Only stations that actually registered a FIR against this criminal
+  const sids=[...new Set(cs.map(c=>c.sid))];
+  const cr2=cs.filter(c=>c.severity==='Critical').length,op=cs.filter(c=>c.st==='Open').length,cl=cs.filter(c=>c.st==='Closed').length;
+
+  g('cpn',cr.name);
+  g('cpm',`${cr.id} · Age ${cr.age} · ${cr.address}`);
+  // Dynamic mini-map title
+  g('mm-title',`🗺️ ${sids.length} Station${sids.length!==1?'s':''} Registered FIRs Against ${cr.name}`);
+
+  document.getElementById('cpst').innerHTML=`
+    <div class="dps"><div class="dpsv">${cs.length}</div><div class="dpsl">Total FIRs</div></div>
+    <div class="dps"><div class="dpsv r">${cr2}</div><div class="dpsl">Critical</div></div>
+    <div class="dps"><div class="dpsv b">${op}</div><div class="dpsl">Open</div></div>
+    <div class="dps"><div class="dpsv" style="color:var(--p3)">${sids.length}</div><div class="dpsl">Stations</div></div>`;
+
+  // Case list grouped by station — shows exactly which station filed which FIR
+  const cl2=document.getElementById('cpc');cl2.innerHTML='';
+  if(!cs.length){
+    cl2.innerHTML='<div class="empty-st"><span class="ei">📋</span><span>No FIRs on record for this criminal.</span></div>';
+  } else {
+    sids.forEach(sid=>{
+      const stn=ST.find(x=>x.id===sid);
+      if(!stn)return;
+      const stnCases=cs.filter(c=>c.sid===sid);
+      // Station group header
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--p4);padding:8px 4px 4px;border-top:1px solid rgba(59,130,246,.2);margin-top:4px;display:flex;align-items:center;gap:6px';
+      hdr.innerHTML=`<span style="background:rgba(59,130,246,.15);border:1px solid var(--gbr);border-radius:4px;padding:2px 7px;color:var(--p3);font-family:\'Rajdhani\'">${stn.ps}</span>${stn.name} <span style="color:var(--txm)">(${stn.district}, ${stn.sta||stn.state})</span><span style="margin-left:auto;background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.3);border-radius:999px;padding:1px 7px">${stnCases.length} FIR${stnCases.length>1?'s':''}</span>`;
+      cl2.appendChild(hdr);
+      // Cases from this station against this criminal
+      stnCases.forEach(c=>{
+        const d=document.createElement('div');
+        d.className=`mcc ${c.severity==='Critical'?'cr':c.severity==='High'?'hi':'me'}`;
+        d.style.marginLeft='4px';
+        d.innerHTML=`<div class="mcctop"><span class="mccfir">${c.fn}</span><div style="display:flex;gap:4px"><span class="sbadge ${c.severity}">${c.severity}</span><span class="spill ${c.st==='Open'?'Open':c.st==='Closed'?'Closed':'Under'}">${c.st}</span></div></div><div class="mccmeta">${c.ct} &nbsp;·&nbsp; Officer: ${c.on} &nbsp;·&nbsp; ${c.dt}</div>`;
+        cl2.appendChild(d);
+      });
+    });
+  }
+
+  document.getElementById('cp').style.display='flex';
+  // Pass cases so map markers can show exact FIRs per station
+  setTimeout(()=>initCrimMap(sids,cs),80);
+}
+function initCrimMap(sids,crimCases){
+  if(crimMap){crimMap.remove();crimMap=null;}
+  const con=document.getElementById('crim-mini-map');con.innerHTML='';
+  crimMap=L.map(con,{zoomControl:false,attributionControl:false,scrollWheelZoom:false}).setView([12,78],6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18,subdomains:'abcd'}).addTo(crimMap);
+  const bounds=[];
+  sids.forEach(sid=>{
+    const s=ST.find(x=>x.id===sid);if(!s)return;
+    // Build popup showing ONLY the FIRs this station registered against this criminal
+    const stCases=(crimCases||[]).filter(c=>c.sid===sid);
+    const firLines=stCases.map(c=>`<b>${c.fn}</b> — ${c.ct} (${c.severity})`).join('<br/>');
+    const popupHtml=`<div style="font-family:Inter,sans-serif;font-size:11px;min-width:180px">
+      <div style="font-weight:700;color:#c4b5fd;margin-bottom:5px">${s.ps} — ${s.name}</div>
+      <div style="color:#a89fc4;font-size:10px;margin-bottom:6px">${s.district}, ${s.state}</div>
+      <div style="border-top:1px solid rgba(59,130,246,.3);padding-top:6px;color:#fca5a5;font-size:10px">${firLines}</div>
+    </div>`;
+    const highestSev=stCases.some(c=>c.severity==='Critical')?'critical':stCases.some(c=>c.severity==='High')?'high':'';
+    const m=L.marker([s.lat,s.lng],{icon:mkIcon(highestSev)}).addTo(crimMap);
+    m.bindTooltip(`${s.ps} — ${stCases.length} FIR${stCases.length>1?'s':''}`,{className:'stt',direction:'top'});
+    m.bindPopup(popupHtml,{className:'crim-popup',maxWidth:220});
+    bounds.push([s.lat,s.lng]);
+  });
+  if(bounds.length>1)crimMap.fitBounds(bounds,{padding:[20,20]});
+  else if(bounds.length===1)crimMap.setView(bounds[0],10);
+  else {}
+}
+function closeCP(){document.getElementById('cp').style.display='none';if(crimMap){crimMap.remove();crimMap=null;}}
+
+/* ===== ADD FIR ===== */
+function openFIR(){
+  if(!can('add'))return;
+  document.getElementById('fn').value='Auto-generated';
+  document.getElementById('fd').value=new Date().toISOString().split('T')[0];
+  const ss=document.getElementById('fst');ss.innerHTML='';ST.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=`${s.ps} — ${s.name}`;ss.appendChild(o);});
+  const cs=document.getElementById('fct');cs.innerHTML='';
+  ['HOMICIDE','KIDNAPPING','SEXUAL ASSAULT','ARSON','ROBBERY','ASSAULT','FIREARM','DRUG OFFENSE','EXTORTION','COUNTERFEITING','IDENTITY THEFT','CYBERCRIME','FRAUD','VEHICLE','SHOPLIFTING','VANDALISM','BURGLARY','TRAFFIC','PUBLIC INTOXICATION','HUMAN TRAFFICKING'].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o);});
+  const os=document.getElementById('fof');os.innerHTML='';OL.forEach(o=>{const opt=document.createElement('option');opt.value=o.id;opt.textContent=`${o.name} (${o.id})`;os.appendChild(opt);});
+  const rs=document.getElementById('fcr');rs.innerHTML='';CRL.forEach(c=>{const opt=document.createElement('option');opt.value=c.id;opt.textContent=`${c.name} (${c.id})`;rs.appendChild(opt);});
+  document.getElementById('m-fir').classList.remove('hidden');
+}
+function closeFIR(){document.getElementById('m-fir').classList.add('hidden');}
+async function submitFIR(){
+  const sid=parseInt(document.getElementById('fst').value),ct=document.getElementById('fct').value;
+  const oi=document.getElementById('fof').value,ci=document.getElementById('fcr').value,st2=document.getElementById('fstat').value;
+  const hn=document.getElementById('fhn').value,it=document.getElementById('fit').value;
+  const cnt=parseInt(document.getElementById('fcc').value)||1,pct=parseInt(document.getElementById('fp').value)||0;
+  const rem=document.getElementById('frm').value||'—',dt=document.getElementById('fd').value;
+
+  try {
+    const res = await fetch(`${API_BASE}/cases`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        stationId: sid, officerId: oi, criminalId: ci, crimeType: ct,
+        status: st2, handling: hn, investigationType: it, crimeCount: cnt,
+        completionPct: pct, remarks: rem, arrestDate: dt
+      })
+    });
+    if(!res.ok) throw new Error('Failed to submit FIR');
+    await fetchInitialData();
+    closeFIR();charts.done=false;showToast(`✅ FIR registered successfully!`);
+    if(activeSec==='criminals')renderCriminals(document.getElementById('crsi').value);
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+/* ===== ADD CRIMINAL ===== */
+function openAddCrim(){
+  if(!can('add'))return;
+  const nid='CRIM-'+(111+CRL.length),nph='IMG-'+(CRL.length+12).toString().padStart(4,'0');
+  document.getElementById('cid').value=nid;document.getElementById('cph').value=nph;
+  document.getElementById('cnm').value='';document.getElementById('cage').value='25';
+  document.getElementById('cadr').value='';document.getElementById('cali').value='';
+  document.getElementById('m-crim').classList.remove('hidden');
+}
+function closeAddCrim(){document.getElementById('m-crim').classList.add('hidden');}
+async function submitCrim(){
+  const name=document.getElementById('cnm').value.trim();if(!name){alert('Name required.');return;}
+  const age=parseInt(document.getElementById('cage').value)||25,address=document.getElementById('cadr').value.trim()||'Unknown';
+  const alias=document.getElementById('cali').value.trim();
+  const photoId=document.getElementById('cph').value;
+
+  try {
+    const res = await fetch(`${API_BASE}/criminals`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, age, address, alias, photoId })
+    });
+    if(!res.ok) throw new Error('Failed to add criminal');
+    const data = await res.json();
+    await fetchInitialData();
+    closeAddCrim();showToast(`✅ Criminal ${name} (${data.id}) added!`);
+    renderCriminals(document.getElementById('crsi').value||'');
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+/* ===== UTILS ===== */
+function g(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3500);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCDM();closeFIR();closeAddCrim();closeOP();closeCP();if(selStn)closeStn();}});
+
+/* ===== BOOT ===== */
+window.onload=async ()=>{
+  try {
+    const res = await fetch(`${API_BASE}/stations`);
+    const rawST = await res.json();
+    ST = rawST.map(s => ({id: s.id, ps: s.ps_code, name: s.name, district: s.district, state: s.state, lat: s.lat, lng: s.lng, sector: s.sector}));
+  } catch(e) { console.error("Failed to load stations early", e); }
+
+  const s=localStorage.getItem('csn');
+  if(s){
+    CU=JSON.parse(s);
+    await fetchInitialData();
+    startApp();
+  }
+};
+</script>
+
+</body>
+
+</html>
+
