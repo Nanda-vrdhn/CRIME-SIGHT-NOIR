@@ -1,0 +1,32 @@
+# --- Python --------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# --- SQLite database -----------------------------------------------------
+# Recreated from sql/schema.sql + sql/seed.sql on first run — never commit it.
+*.db
+*.sqlite
+*.sqlite3
+*-wal
+*-shm
+
+# --- Editors / OS --------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Environment ---------------------------------------------------------
+.env
+.env.*
